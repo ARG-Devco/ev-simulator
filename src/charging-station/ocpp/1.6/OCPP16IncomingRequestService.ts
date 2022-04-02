@@ -21,11 +21,15 @@ import fs from 'fs';
 import logger from '../../../utils/Logger';
 import path from 'path';
 import tar from 'tar';
+const chalk = require('chalk');
 
 export default class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
   public async handleRequest(messageId: string, commandName: OCPP16IncomingRequestCommand, commandPayload: Record<string, unknown>): Promise<void> {
     let response;
     const methodName = `handleRequest${commandName}`;
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Incoming command: ` + commandName.toString() + "---------"));
+    logger.debug(' %j', commandPayload);
+
     // Call
     if (typeof this[methodName] === 'function') {
       try {
@@ -46,6 +50,9 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     }
     // Send the built response
     await this.chargingStation.ocppRequestService.sendMessage(messageId, response, MessageType.CALL_RESULT_MESSAGE, commandName);
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "Response"));
+    logger.debug('%j', response);
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Done: ` + commandName.toString() + "---------"));
   }
 
   // Simulate charging station restart

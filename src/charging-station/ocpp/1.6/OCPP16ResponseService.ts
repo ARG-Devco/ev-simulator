@@ -9,9 +9,17 @@ import { OCPP16StandardParametersKey } from '../../../types/ocpp/1.6/Configurati
 import OCPPResponseService from '../OCPPResponseService';
 import Utils from '../../../utils/Utils';
 import logger from '../../../utils/Logger';
+const chalk = require('chalk');
 
 export default class OCPP16ResponseService extends OCPPResponseService {
   public async handleResponse(commandName: OCPP16RequestCommand, payload: Record<string, unknown> | string, requestPayload: Record<string, unknown>): Promise<void> {
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "---------"));
+    logger.debug(' %j', requestPayload);
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Received: ` + commandName.toString() + "Response"));
+    logger.debug('%j', payload);
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Done: ` + commandName.toString() + "---------"));
+
+
     const responseCallbackMethodName = `handleResponse${commandName}`;
     if (typeof this[responseCallbackMethodName] === 'function') {
       await this[responseCallbackMethodName](payload, requestPayload);

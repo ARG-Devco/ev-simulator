@@ -30,6 +30,7 @@ export default abstract class OCPPRequestService {
     // Send a message through wsConnection
     return new Promise((resolve, reject) => {
       const messageToSend = this.buildMessageToSend(messageId, commandParams, messageType, commandName, responseCallback, rejectCallback);
+
       if (this.chargingStation.getEnableStatistics()) {
         this.chargingStation.performanceStatistics.addRequestStatistic(commandName, messageType);
       }
@@ -37,6 +38,7 @@ export default abstract class OCPPRequestService {
       if (this.chargingStation.isWebSocketConnectionOpened()) {
         // Yes: Send Message
         const beginId = PerformanceStatistics.beginMeasure(commandName);
+        logger.debug(`${self.chargingStation.logPrefix()} OCPP sending: ${messageToSend}`);
         this.chargingStation.wsConnection.send(messageToSend);
         PerformanceStatistics.endMeasure(commandName, beginId);
       } else if (!skipBufferingOnError) {
