@@ -71,7 +71,7 @@ export class OCPP16ServiceUtils {
     // Energy.Active.Import.Register measurand (default)
     const sampledValueTemplate = chargingStation.getSampledValueTemplate(connectorId);
     const unitDivider = sampledValueTemplate?.unit === MeterValueUnit.KILO_WATT_HOUR ? 1000 : 1;
-    meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(sampledValueTemplate, Utils.roundTo(meterBegin / unitDivider, 1), MeterValueContext.TRANSACTION_BEGIN));
+    meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(sampledValueTemplate, Utils.roundTo(meterBegin / unitDivider, 4), MeterValueContext.TRANSACTION_BEGIN));
     return meterValue;
   }
 
@@ -83,7 +83,7 @@ export class OCPP16ServiceUtils {
     // Energy.Active.Import.Register measurand (default)
     const sampledValueTemplate = chargingStation.getSampledValueTemplate(connectorId);
     const unitDivider = sampledValueTemplate?.unit === MeterValueUnit.KILO_WATT_HOUR ? 1000 : 1;
-    meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(sampledValueTemplate, Utils.roundTo(meterEnd / unitDivider, 1), MeterValueContext.TRANSACTION_END));
+    meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(sampledValueTemplate, Utils.roundTo(meterEnd / unitDivider, 4), MeterValueContext.TRANSACTION_END));
     return meterValue;
   }
 
