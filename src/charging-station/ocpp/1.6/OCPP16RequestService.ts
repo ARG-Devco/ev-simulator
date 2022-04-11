@@ -81,7 +81,7 @@ export default class OCPP16RequestService extends OCPPRequestService {
       const payload: StartTransactionRequest = {
         connectorId,
         ...!Utils.isUndefined(idTag) ? { idTag } : { idTag: Constants.TRANSACTION_DEFAULT_IDTAG },
-        meterStart: this.chargingStation.getEnergyActiveImportRegisterByConnectorId(connectorId),
+        meterStart: Utils.roundTo(this.chargingStation.getEnergyActiveImportRegisterByConnectorId(connectorId),0),
         timestamp: new Date().toISOString(),
       };
       return await this.sendMessage(Utils.generateUUID(), payload, MessageType.CALL_MESSAGE, OCPP16RequestCommand.START_TRANSACTION) as OCPP16StartTransactionResponse;
@@ -107,7 +107,7 @@ export default class OCPP16RequestService extends OCPPRequestService {
       const payload: StopTransactionRequest = {
         transactionId,
         ...!Utils.isUndefined(idTag) && { idTag },
-        meterStop,
+        meterStop: Utils.roundTo(meterStop,0),
         timestamp: new Date().toISOString(),
         ...reason && { reason },
         ...this.chargingStation.getTransactionDataMeterValues() && { transactionData: OCPP16ServiceUtils.buildTransactionDataMeterValues(this.chargingStation.getConnector(connectorId).transactionBeginMeterValue, transactionEndMeterValue) },
