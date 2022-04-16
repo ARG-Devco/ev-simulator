@@ -186,9 +186,9 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     if (commandPayload.csChargingProfiles.chargingProfilePurpose === ChargingProfilePurposeType.CHARGE_POINT_MAX_PROFILE && commandPayload.connectorId !== 0) {
       return Constants.OCPP_SET_CHARGING_PROFILE_RESPONSE_REJECTED;
     }
-    if (commandPayload.csChargingProfiles.chargingProfilePurpose === ChargingProfilePurposeType.TX_PROFILE && (commandPayload.connectorId === 0 || !this.chargingStation.getConnector(commandPayload.connectorId)?.transactionStarted)) {
-      return Constants.OCPP_SET_CHARGING_PROFILE_RESPONSE_REJECTED;
-    }
+    // if (commandPayload.csChargingProfiles.chargingProfilePurpose === ChargingProfilePurposeType.TX_PROFILE && (commandPayload.connectorId === 0 || !this.chargingStation.getConnector(commandPayload.connectorId)?.transactionStarted)) {
+    //   return Constants.OCPP_SET_CHARGING_PROFILE_RESPONSE_REJECTED;
+    // }
     this.chargingStation.setChargingProfile(commandPayload.connectorId, commandPayload.csChargingProfiles);
     logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) set, dump their stack: %j`, this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles);
     return Constants.OCPP_SET_CHARGING_PROFILE_RESPONSE_ACCEPTED;

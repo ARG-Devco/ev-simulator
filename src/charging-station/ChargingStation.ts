@@ -1,38 +1,55 @@
-import { AvailabilityType, BootNotificationRequest, IncomingRequest, IncomingRequestCommand, Request } from '../types/ocpp/Requests';
-import { BootNotificationResponse, RegistrationStatus } from '../types/ocpp/Responses';
-import ChargingStationConfiguration, { ConfigurationKey } from '../types/ChargingStationConfiguration';
-import ChargingStationTemplate, { CurrentType, PowerUnits, Voltage } from '../types/ChargingStationTemplate';
-import { Connector, Connectors, SampledValueTemplate } from '../types/Connectors';
-import { ConnectorPhaseRotation, StandardParametersKey, SupportedFeatureProfiles } from '../types/ocpp/Configuration';
-import { MeterValueMeasurand, MeterValuePhase } from '../types/ocpp/MeterValues';
-import { WSError, WebSocketCloseEventStatusCode } from '../types/WebSocket';
-import WebSocket, { ClientOptions, Data, OPEN } from 'ws';
+import {
+  AvailabilityType,
+  BootNotificationRequest,
+  IncomingRequest,
+  IncomingRequestCommand,
+  Request
+} from '../types/ocpp/Requests';
+import {BootNotificationResponse, RegistrationStatus} from '../types/ocpp/Responses';
+import ChargingStationConfiguration, {
+  ConfigurationKey
+} from '../types/ChargingStationConfiguration';
+import ChargingStationTemplate, {
+  CurrentType,
+  PowerUnits,
+  Voltage
+} from '../types/ChargingStationTemplate';
+import {Connector, Connectors, SampledValueTemplate} from '../types/Connectors';
+import {
+  ConnectorPhaseRotation,
+  StandardParametersKey,
+  SupportedFeatureProfiles
+} from '../types/ocpp/Configuration';
+import {MeterValueMeasurand, MeterValuePhase} from '../types/ocpp/MeterValues';
+import {WSError, WebSocketCloseEventStatusCode} from '../types/WebSocket';
+import WebSocket, {ClientOptions, Data, OPEN} from 'ws';
 
 import AutomaticTransactionGenerator from './AutomaticTransactionGenerator';
-import { ChargePointStatus } from '../types/ocpp/ChargePointStatus';
-import { ChargingProfile } from '../types/ocpp/ChargingProfile';
+import {ChargePointStatus} from '../types/ocpp/ChargePointStatus';
+import {ChargingProfile} from '../types/ocpp/ChargingProfile';
 import ChargingStationInfo from '../types/ChargingStationInfo';
-import { ClientRequestArgs } from 'http';
+import {ClientRequestArgs} from 'http';
 import Configuration from '../utils/Configuration';
 import Constants from '../utils/Constants';
-import { ErrorType } from '../types/ocpp/ErrorType';
+import {ErrorType} from '../types/ocpp/ErrorType';
 import FileUtils from '../utils/FileUtils';
-import { MessageType } from '../types/ocpp/MessageType';
+import {MessageType} from '../types/ocpp/MessageType';
 import OCPP16IncomingRequestService from './ocpp/1.6/OCPP16IncomingRequestService';
 import OCPP16RequestService from './ocpp/1.6/OCPP16RequestService';
 import OCPP16ResponseService from './ocpp/1.6/OCPP16ResponseService';
 import OCPPError from './ocpp/OCPPError';
 import OCPPIncomingRequestService from './ocpp/OCPPIncomingRequestService';
 import OCPPRequestService from './ocpp/OCPPRequestService';
-import { OCPPVersion } from '../types/ocpp/OCPPVersion';
+import {OCPPVersion} from '../types/ocpp/OCPPVersion';
 import PerformanceStatistics from '../performance/PerformanceStatistics';
-import { StopTransactionReason } from '../types/ocpp/Transaction';
-import { URL } from 'url';
+import {StopTransactionReason} from '../types/ocpp/Transaction';
+import {URL} from 'url';
 import Utils from '../utils/Utils';
 import crypto from 'crypto';
 import fs from 'fs';
 import logger from '../utils/Logger';
 import path from 'path';
+import {ChargingRateUnitType, ChargingSchedulePeriod} from "../types/ocpp/1.6/ChargingProfile";
 
 export default class ChargingStation {
   public stationTemplateFile: string;
@@ -221,7 +238,7 @@ export default class ChargingStation {
   }
 
   public getSampledValueTemplate(connectorId: number, measurand: MeterValueMeasurand = MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER,
-      phase?: MeterValuePhase): SampledValueTemplate | undefined {
+                                 phase?: MeterValuePhase): SampledValueTemplate | undefined {
     if (!Constants.SUPPORTED_MEASURANDS.includes(measurand)) {
       logger.warn(`${this.logPrefix()} Trying to get unsupported MeterValues measurand '${measurand}' ${phase ? `on phase ${phase} ` : ''}in template on connectorId ${connectorId}`);
       return;
@@ -235,13 +252,13 @@ export default class ChargingStation {
       if (!Constants.SUPPORTED_MEASURANDS.includes(sampledValueTemplates[index]?.measurand ?? MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER)) {
         logger.warn(`${this.logPrefix()} Unsupported MeterValues measurand '${measurand}' ${phase ? `on phase ${phase} ` : ''}in template on connectorId ${connectorId}`);
       } else if (phase && sampledValueTemplates[index]?.phase === phase && sampledValueTemplates[index]?.measurand === measurand
-                 && this.getConfigurationKey(StandardParametersKey.MeterValuesSampledData).value.includes(measurand)) {
+        && this.getConfigurationKey(StandardParametersKey.MeterValuesSampledData).value.includes(measurand)) {
         return sampledValueTemplates[index];
       } else if (!phase && !sampledValueTemplates[index].phase && sampledValueTemplates[index]?.measurand === measurand
-                 && this.getConfigurationKey(StandardParametersKey.MeterValuesSampledData).value.includes(measurand)) {
+        && this.getConfigurationKey(StandardParametersKey.MeterValuesSampledData).value.includes(measurand)) {
         return sampledValueTemplates[index];
       } else if (measurand === MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER
-                 && (!sampledValueTemplates[index].measurand || sampledValueTemplates[index].measurand === measurand)) {
+        && (!sampledValueTemplates[index].measurand || sampledValueTemplates[index].measurand === measurand)) {
         return sampledValueTemplates[index];
       }
     }
@@ -376,7 +393,10 @@ export default class ChargingStation {
       const keyIndex = this.configuration.configurationKey.indexOf(keyFound);
       this.configuration.configurationKey[keyIndex].value = value;
     } else {
-      logger.error(`${this.logPrefix()} Trying to set a value on a non existing configuration key: %j`, { key, value });
+      logger.error(`${this.logPrefix()} Trying to set a value on a non existing configuration key: %j`, {
+        key,
+        value
+      });
     }
   }
 
@@ -385,13 +405,32 @@ export default class ChargingStation {
     if (!Utils.isEmptyArray(this.getConnector(connectorId).chargingProfiles)) {
       this.getConnector(connectorId).chargingProfiles?.forEach((chargingProfile: ChargingProfile, index: number) => {
         if (chargingProfile.chargingProfileId === cp.chargingProfileId
-            || (chargingProfile.stackLevel === cp.stackLevel && chargingProfile.chargingProfilePurpose === cp.chargingProfilePurpose)) {
+          || (chargingProfile.stackLevel === cp.stackLevel && chargingProfile.chargingProfilePurpose === cp.chargingProfilePurpose)) {
           this.getConnector(connectorId).chargingProfiles[index] = cp;
           cpReplaced = true;
         }
       });
     }
     !cpReplaced && this.getConnector(connectorId).chargingProfiles?.push(cp);
+  }
+
+  public getChargingProfileAllowablePower(connectorId: number, maxPower: number): number {
+    let allowablePower = maxPower ;
+    if (!Utils.isEmptyArray(this.getConnector(connectorId).chargingProfiles)) {
+      this.getConnector(connectorId).chargingProfiles?.forEach((chargingProfile: ChargingProfile, index: number) => {
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.chargingRateUnit}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.minChargeRate}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingProfilePurpose}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingProfileKind}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.validFrom}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.validTo}`);
+        if (chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit < allowablePower) {
+          allowablePower = chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit ;
+        }
+      })
+    }
+    return allowablePower;
   }
 
   public resetTransactionOnConnector(connectorId: number): void {
@@ -483,11 +522,19 @@ export default class ChargingStation {
     this.bootNotificationRequest = {
       chargePointModel: this.stationInfo.chargePointModel,
       chargePointVendor: this.stationInfo.chargePointVendor,
-      ...!Utils.isUndefined(this.stationInfo.chargeBoxSerialNumberPrefix) && { chargeBoxSerialNumber: this.stationInfo.chargeBoxSerialNumberPrefix },
-      ...!Utils.isUndefined(this.stationInfo.firmwareVersion) && { firmwareVersion: this.stationInfo.firmwareVersion },
+      ...!Utils.isUndefined(this.stationInfo.chargeBoxSerialNumberPrefix) && {chargeBoxSerialNumber: this.stationInfo.chargeBoxSerialNumberPrefix},
+      ...!Utils.isUndefined(this.stationInfo.firmwareVersion) && {firmwareVersion: this.stationInfo.firmwareVersion},
     };
     this.configuration = this.getTemplateChargingStationConfiguration();
-    this.wsConnectionUrl = new URL(this.getSupervisionURL().href + '/' + this.stationInfo.chargingStationId);
+    let chargingStationId : string;
+    if (this.stationInfo.genericPath === true)
+    {
+      chargingStationId = '';
+    }else
+    {
+      chargingStationId = '/' + this.stationInfo.chargingStationId ;
+    }
+    this.wsConnectionUrl = new URL(this.getSupervisionURL().href + chargingStationId);
     // Build connectors if needed
     const maxConnectors = this.getMaxNumberOfConnectors();
     if (maxConnectors <= 0) {
@@ -580,7 +627,7 @@ export default class ChargingStation {
           connectorPhaseRotation.push(`${connector}.${ConnectorPhaseRotation.RST}`);
         } else if (Utils.convertToInt(connector) > 0 && this.getNumberOfPhases() === 0) {
           connectorPhaseRotation.push(`${connector}.${ConnectorPhaseRotation.NotApplicable}`);
-        // AC
+          // AC
         } else if (Utils.convertToInt(connector) > 0 && this.getNumberOfPhases() === 1) {
           connectorPhaseRotation.push(`${connector}.${ConnectorPhaseRotation.NotApplicable}`);
         } else if (Utils.convertToInt(connector) > 0 && this.getNumberOfPhases() === 3) {
@@ -593,7 +640,7 @@ export default class ChargingStation {
       this.addConfigurationKey(StandardParametersKey.AuthorizeRemoteTxRequests, 'true');
     }
     if (!this.getConfigurationKey(StandardParametersKey.LocalAuthListEnabled)
-        && this.getConfigurationKey(StandardParametersKey.SupportedFeatureProfiles).value.includes(SupportedFeatureProfiles.Local_Auth_List_Management)) {
+      && this.getConfigurationKey(StandardParametersKey.SupportedFeatureProfiles).value.includes(SupportedFeatureProfiles.Local_Auth_List_Management)) {
       this.addConfigurationKey(StandardParametersKey.LocalAuthListEnabled, 'false');
     }
     if (!this.getConfigurationKey(StandardParametersKey.ConnectionTimeOut)) {
@@ -897,7 +944,8 @@ export default class ChargingStation {
     if (webSocketPingInterval > 0 && !this.webSocketPingSetInterval) {
       this.webSocketPingSetInterval = setInterval(() => {
         if (this.isWebSocketConnectionOpened()) {
-          this.wsConnection.ping((): void => { /* This is intentional */ });
+          this.wsConnection.ping((): void => { /* This is intentional */
+          });
         }
       }, webSocketPingInterval * 1000);
       logger.info(this.logPrefix() + ' WebSocket ping started every ' + Utils.formatDurationSeconds(webSocketPingInterval));
@@ -1009,7 +1057,7 @@ export default class ChargingStation {
             this.initialize();
             // Restart the ATG
             if (!this.stationInfo.AutomaticTransactionGenerator.enable &&
-                this.automaticTransactionGenerator) {
+              this.automaticTransactionGenerator) {
               this.automaticTransactionGenerator.stop();
             }
             this.startAutomaticTransactionGenerator();
@@ -1052,7 +1100,7 @@ export default class ChargingStation {
       logger.error(`${this.logPrefix()} Socket: connection retry in ${Utils.roundTo(reconnectDelay, 2)}ms, timeout ${reconnectTimeout}ms`);
       await Utils.sleep(reconnectDelay);
       logger.error(this.logPrefix() + ' Socket: reconnecting try #' + this.autoReconnectRetryCount.toString());
-      this.openWSConnection({ handshakeTimeout: reconnectTimeout }, true);
+      this.openWSConnection({handshakeTimeout: reconnectTimeout}, true);
       this.wsConnectionRestarted = true;
     } else if (this.getAutoReconnectMaxRetries() !== -1) {
       logger.error(`${this.logPrefix()} Socket reconnect failure: max retries reached (${this.autoReconnectRetryCount}) or retry disabled (${this.getAutoReconnectMaxRetries()})`);

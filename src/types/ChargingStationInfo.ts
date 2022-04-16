@@ -5,4 +5,5 @@ export default interface ChargingStationInfo extends ChargingStationTemplate {
   chargeBoxSerialNumber?: string;
   maxPower?: number; // Always in Watt
   powerDivider?: number;
+  genericPath?: boolean;
 }
