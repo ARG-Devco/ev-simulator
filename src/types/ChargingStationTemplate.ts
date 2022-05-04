@@ -22,6 +22,13 @@ export enum Voltage {
 
 export interface AutomaticTransactionGenerator {
   enable: boolean;
+  batterySize: number,
+  minBatterySize: number,
+  maxBatterySize: number,
+  minStartSOC: number,
+  maxStartSOC: number,
+  minDesiredSOC: number,
+  maxDesiredSOC: number,
   minDuration: number;
   maxDuration: number;
   minDelayBetweenTwoTransactions: number;

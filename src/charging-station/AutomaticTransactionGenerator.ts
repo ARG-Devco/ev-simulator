@@ -84,9 +84,18 @@ export default class AutomaticTransactionGenerator {
         // Start transaction
         const startResponse = await this.startTransaction(connectorId);
         if (startResponse?.idTagInfo?.status !== AuthorizationStatus.ACCEPTED) {
+
           logger.warn(this.logPrefix(connectorId) + ' transaction rejected');
           await Utils.sleep(Constants.CHARGING_STATION_ATG_WAIT_TIME);
         } else {
+
+          this.chargingStation.getConnector(connectorId).batterySize = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minBatterySize,
+            this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxBatterySize) ;
+          this.chargingStation.getConnector(connectorId).startSOC = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minStartSOC,
+            this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxStartSOC) ;
+
+          logger.info(this.logPrefix(connectorId) + ' batterySize (Wh): ' + this.chargingStation.getConnector(connectorId).batterySize.toString() + 'at SOC: ' + this.chargingStation.getConnector(connectorId).startSOC.toString());
+
           // Wait until end of transaction
           const waitTrxEnd = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxDuration,
             this.chargingStation.stationInfo.AutomaticTransactionGenerator.minDuration) * 1000;

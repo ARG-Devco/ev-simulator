@@ -318,9 +318,11 @@ export default class OCPP16RequestService extends OCPPRequestService {
 
         if (socSampledValueTemplate) {
           const unitDivider = energySampledValueTemplate?.unit === MeterValueUnit.KILO_WATT_HOUR ? 1000 : 1;
+          const batteryEnergy = connector.transactionEnergyActiveImportRegisterValue + ( connector.startSOC / 100.0 * (connector.batterySize / unitDivider))
+
           const socSampledValueTemplateValue = socSampledValueTemplate.value
-            ? Number((connector.transactionEnergyActiveImportRegisterValue / (85000 / unitDivider) * 100).toFixed(2))
-            : Number((connector.transactionEnergyActiveImportRegisterValue / (85000 / unitDivider) * 100).toFixed(2));
+            ? Number((batteryEnergy / (connector.batterySize / unitDivider) * 100).toFixed(2))
+            : Number((batteryEnergy / (connector.batterySize / unitDivider) * 100).toFixed(2));
           meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, socSampledValueTemplateValue));
           const sampledValuesIndex = meterValue.sampledValue.length - 1;
           if (Utils.convertToInt(meterValue.sampledValue[sampledValuesIndex].value) > 100 || debug) {
