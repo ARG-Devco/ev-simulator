@@ -1,0 +1,118 @@
+{
+  "authorizationFile": "authorization-tags-{{ serial }}.json",
+  "baseName": "{{ serial }}",
+  "genericPath": {{ genericPath |default("false", true) }},
+  "chargeBoxSerialNumberPrefix": "{{ serial }}",
+  "firmwareVersion" : "IT-1.0.0",
+  "fixedName": true,
+  "chargePointModel": "Simulator simple",
+  "chargePointVendor": "Terawatt",
+  "power": {{ power }},
+  "powerUnit": "W",
+  "powerSharedByConnectors": true,
+  "currentOutType": "{{ currentType }}",
+  "numberOfPhases":0,
+  "numberOfConnectors": 1,
+  "randomConnectors": false,
+  "beginEndMeterValues" : false,
+  "outOfOrderEndMeterValues" : false,
+  "transactionDataMeterValues" : false,
+  "enableStatistics": false,
+  "Configuration": {
+    "configurationKey": [
+      {
+        "key": "ChargingScheduleAllowedChargingRateUnit",
+        "readonly": true,
+        "value": "Power"
+      },
+      {
+        "key": "ChargeProfileMaxStackLevel",
+        "readonly": true,
+        "value": "1"
+      },
+          {
+        "key": "ChargingScheduleMaxPeriods",
+        "readonly": true,
+        "value": "1"
+      },
+      {
+        "key": "MaxChargingProfilesInstalled",
+        "readonly": true,
+        "value": "1"
+      },
+      {
+        "key": "MeterValuesSampledData",
+        "readonly": false,
+        "value": "Energy.Active.Import.Register,Power.Active.Import,SoC"
+      },
+      {
+        "key": "MeterValueSampleInterval",
+        "readonly": false,
+        "value": "30"
+      },
+      {
+        "key": "SupportedFeatureProfiles",
+        "readonly": true,
+        "value": "Core,LocalAuthListManagement,SmartCharging"
+      },
+      {
+        "key": "LocalAuthListEnabled",
+        "readonly": false,
+        "value": "false"
+      },
+      {
+        "key": "AuthorizeRemoteTxRequests",
+        "readonly": false,
+        "value": "false"
+      },
+      {
+        "key": "WebSocketPingInterval",
+        "readonly": false,
+        "value": "600"
+      }
+    ]
+  },
+  "AutomaticTransactionGenerator": {
+    "enable": {{ automatictransaction }},
+    "minDuration": {{ minDuration }},
+    "maxDuration": {{ maxDuration }},
+    "minDelayBetweenTwoTransactions": {{ minDelayBetweenTwoTransactions }},
+    "maxDelayBetweenTwoTransactions": {{ maxDelayBetweenTwoTransactions }},
+    "probabilityOfStart": 1,
+    "stopAfterHours": 0.008,
+    "stopOnConnectionFailure": false,
+    "requireAuthorize": {{ requireAuthorize }}
+  },
+  "Connectors": {
+    "0": {},
+    "1": {
+      "bootStatus": "Available",
+      "MeterValues": [
+        {
+          "unit": "Wh",
+          "context": "Sample.Periodic",
+          "format":"Raw",
+          "location":"Outlet",
+          "measurand": "Energy.Active.Import.Register",
+          "fluctuationPercent": "0"
+        },
+        {
+          "unit": "W",
+          "context": "Sample.Periodic",
+          "measurand": "Power.Active.Import",
+          "format":"Raw",
+          "location":"Outlet",
+          "fluctuationPercent": "0"
+        },
+        {
+          "unit": "Percent",
+          "context": "Sample.Periodic",
+          "measurand": "SoC",
+          "format":"Raw",
+          "location": "EV",
+          "fluctuationPercent": "0"
+        }
+      ]
+    }
+  }
+}

@@ -195,15 +195,18 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
   }
 
   private handleRequestClearChargingProfile(commandPayload: ClearChargingProfileRequest): ClearChargingProfileResponse {
+    commandPayload.connectorId = 1 ;
+
     if (!this.chargingStation.getConnector(commandPayload.connectorId)) {
       logger.error(`${this.chargingStation.logPrefix()} Trying to clear a charging profile(s) to a non existing connector Id ${commandPayload.connectorId}`);
       return Constants.OCPP_CLEAR_CHARGING_PROFILE_RESPONSE_UNKNOWN;
     }
-    if (commandPayload.connectorId && !Utils.isEmptyArray(this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles)) {
+    if (commandPayload.connectorId) {
       this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles = [];
       logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) cleared, dump their stack: %j`, this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles);
       return Constants.OCPP_CLEAR_CHARGING_PROFILE_RESPONSE_ACCEPTED;
     }
+
     if (!commandPayload.connectorId) {
       let clearedCP = false;
       for (const connector in this.chargingStation.connectors) {

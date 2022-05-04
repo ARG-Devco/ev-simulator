@@ -1082,29 +1082,31 @@ export default class ChargingStation {
   }
 
   private async reconnect(code: number): Promise<void> {
-    // Stop WebSocket ping
-    this.stopWebSocketPing();
-    // Stop heartbeat
-    this.stopHeartbeat();
-    // Stop the ATG if needed
-    if (this.stationInfo.AutomaticTransactionGenerator.enable &&
-      this.stationInfo.AutomaticTransactionGenerator.stopOnConnectionFailure &&
-      this.automaticTransactionGenerator &&
-      this.automaticTransactionGenerator.started) {
-      this.automaticTransactionGenerator.stop();
-    }
-    if (this.autoReconnectRetryCount < this.getAutoReconnectMaxRetries() || this.getAutoReconnectMaxRetries() === -1) {
-      this.autoReconnectRetryCount++;
-      const reconnectDelay = (this.getReconnectExponentialDelay() ? Utils.exponentialDelay(this.autoReconnectRetryCount) : this.getConnectionTimeout() * 1000);
-      const reconnectTimeout = reconnectDelay - 100;
-      logger.error(`${this.logPrefix()} Socket: connection retry in ${Utils.roundTo(reconnectDelay, 2)}ms, timeout ${reconnectTimeout}ms`);
-      await Utils.sleep(reconnectDelay);
-      logger.error(this.logPrefix() + ' Socket: reconnecting try #' + this.autoReconnectRetryCount.toString());
-      this.openWSConnection({handshakeTimeout: reconnectTimeout}, true);
-      this.wsConnectionRestarted = true;
-    } else if (this.getAutoReconnectMaxRetries() !== -1) {
-      logger.error(`${this.logPrefix()} Socket reconnect failure: max retries reached (${this.autoReconnectRetryCount}) or retry disabled (${this.getAutoReconnectMaxRetries()})`);
-    }
+    // // Stop WebSocket ping
+    // this.stopWebSocketPing();
+    // // Stop heartbeat
+    // this.stopHeartbeat();
+    // // Stop the ATG if needed
+    // if (this.stationInfo.AutomaticTransactionGenerator.enable &&
+    //   this.stationInfo.AutomaticTransactionGenerator.stopOnConnectionFailure &&
+    //   this.automaticTransactionGenerator &&
+    //   this.automaticTransactionGenerator.started) {
+    //   this.automaticTransactionGenerator.stop();
+    // }
+    this.openWSConnection({handshakeTimeout: 3000}, true);
+    this.wsConnectionRestarted = true;
+    // if (this.autoReconnectRetryCount < this.getAutoReconnectMaxRetries() || this.getAutoReconnectMaxRetries() === -1) {
+    //   this.autoReconnectRetryCount++;
+    //   const reconnectDelay = (this.getReconnectExponentialDelay() ? Utils.exponentialDelay(this.autoReconnectRetryCount) : this.getConnectionTimeout() * 1000);
+    //   const reconnectTimeout = reconnectDelay - 100;
+    //   logger.error(`${this.logPrefix()} Socket: connection retry in ${Utils.roundTo(reconnectDelay, 2)}ms, timeout ${reconnectTimeout}ms`);
+    //   await Utils.sleep(reconnectDelay);
+    //   logger.error(this.logPrefix() + ' Socket: reconnecting try #' + this.autoReconnectRetryCount.toString());
+    //   this.openWSConnection({handshakeTimeout: reconnectTimeout}, true);
+    //   this.wsConnectionRestarted = true;
+    // } else if (this.getAutoReconnectMaxRetries() !== -1) {
+    //   logger.error(`${this.logPrefix()} Socket reconnect failure: max retries reached (${this.autoReconnectRetryCount}) or retry disabled (${this.getAutoReconnectMaxRetries()})`);
+    // }
   }
 
   private initTransactionAttributesOnConnector(connectorId: number): void {
