@@ -35,6 +35,7 @@ export interface AutomaticTransactionGenerator {
   maxDelayBetweenTwoTransactions: number;
   probabilityOfStart: number;
   stopAfterHours: number;
+  stopAfterNumberOfTransaction: number;
   stopOnConnectionFailure: boolean;
   requireAuthorize?: boolean
 }

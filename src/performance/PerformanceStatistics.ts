@@ -10,6 +10,7 @@ import Utils from '../utils/Utils';
 import { WorkerMessageEvents } from '../types/Worker';
 import logger from '../utils/Logger';
 import { parentPort } from 'worker_threads';
+import {bold} from "chalk";
 
 export default class PerformanceStatistics {
   private objId: string;

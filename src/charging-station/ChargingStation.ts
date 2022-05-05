@@ -415,7 +415,7 @@ export default class ChargingStation {
   }
 
   public getChargingProfileAllowablePower(connectorId: number, maxPower: number): number {
-    let allowablePower = maxPower ;
+    let allowablePower = maxPower;
     if (!Utils.isEmptyArray(this.getConnector(connectorId).chargingProfiles)) {
       this.getConnector(connectorId).chargingProfiles?.forEach((chargingProfile: ChargingProfile, index: number) => {
         logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.chargingRateUnit}`);
@@ -426,7 +426,7 @@ export default class ChargingStation {
         logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.validFrom}`);
         logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.validTo}`);
         if (chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit < allowablePower) {
-          allowablePower = chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit ;
+          allowablePower = chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit;
         }
       })
     }
@@ -526,13 +526,11 @@ export default class ChargingStation {
       ...!Utils.isUndefined(this.stationInfo.firmwareVersion) && {firmwareVersion: this.stationInfo.firmwareVersion},
     };
     this.configuration = this.getTemplateChargingStationConfiguration();
-    let chargingStationId : string;
-    if (this.stationInfo.genericPath === true)
-    {
+    let chargingStationId: string;
+    if (this.stationInfo.genericPath === true) {
       chargingStationId = '';
-    }else
-    {
-      chargingStationId = '/' + this.stationInfo.chargingStationId ;
+    } else {
+      chargingStationId = '/' + this.stationInfo.chargingStationId;
     }
     this.wsConnectionUrl = new URL(this.getSupervisionURL().href + chargingStationId);
     // Build connectors if needed
@@ -1057,14 +1055,18 @@ export default class ChargingStation {
             this.initialize();
             // Restart the ATG
             if (!this.stationInfo.AutomaticTransactionGenerator.enable &&
-              this.automaticTransactionGenerator) {
+              this.automaticTransactionGenerator && this.automaticTransactionGenerator.started) {
               this.automaticTransactionGenerator.stop();
             }
             this.startAutomaticTransactionGenerator();
-            if (this.getEnableStatistics()) {
-              this.performanceStatistics.restart();
-            } else {
-              this.performanceStatistics.stop();
+            try {
+              if (this.getEnableStatistics()) {
+                this.performanceStatistics.restart();
+              } else {
+                this.performanceStatistics.stop();
+              }
+            } catch (error) {
+              logger.error(this.logPrefix() + 'Error reconfigure performance statistics : %j', error);
             }
             // FIXME?: restart heartbeat and WebSocket ping when their interval values have changed
           } catch (error) {
