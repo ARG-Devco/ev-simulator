@@ -105,6 +105,13 @@ export default class AutomaticTransactionGenerator {
       const start = Utils.secureRandom();
       if (start < this.chargingStation.stationInfo.AutomaticTransactionGenerator.probabilityOfStart) {
         // Start transaction
+        this.chargingStation.getConnector(connectorId).batterySize = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minBatterySize,
+          this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxBatterySize) ;
+        this.chargingStation.getConnector(connectorId).startSOC = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minStartSOC,
+          this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxStartSOC) ;
+        this.chargingStation.getConnector(connectorId).desiredSOC = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minDesiredSOC,
+          this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxDesiredSOC) ;
+
         const startResponse = await this.startTransaction(connectorId);
         startedTransactions++;
         logger.info(this.logPrefix(connectorId) + ' transactions: ' + startedTransactions + ' / ' + stopAfterNumberOfTransaction);
@@ -114,18 +121,19 @@ export default class AutomaticTransactionGenerator {
           logger.warn(this.logPrefix(connectorId) + ' transaction rejected');
           await Utils.sleep(Constants.CHARGING_STATION_ATG_WAIT_TIME);
         } else {
-          this.chargingStation.getConnector(connectorId).batterySize = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minBatterySize,
-            this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxBatterySize) ;
-          this.chargingStation.getConnector(connectorId).startSOC = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minStartSOC,
-            this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxStartSOC) ;
 
           logger.info(this.logPrefix(connectorId) + ' batterySize: ' + this.chargingStation.getConnector(connectorId).batterySize.toString() + 'Wh at SOC: ' + this.chargingStation.getConnector(connectorId).startSOC.toString() + "%");
 
           // Wait until end of transaction
           const waitTrxEnd = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxDuration,
             this.chargingStation.stationInfo.AutomaticTransactionGenerator.minDuration) * 1000;
-          logger.info(this.logPrefix(connectorId) + ' transaction ' + this.chargingStation.getConnector(connectorId).transactionId.toString() + ' will stop in ' + Utils.formatDurationMilliSeconds(waitTrxEnd));
-          await Utils.sleep(waitTrxEnd);
+          logger.info(this.logPrefix(connectorId) + ' transaction ' + this.chargingStation.getConnector(connectorId).transactionId.toString() + ' will stop in ' + Utils.formatDurationMilliSeconds(waitTrxEnd) + ' or when SOC reaches '+ this.chargingStation.getConnector(connectorId).desiredSOC.toString());
+          let sleepSec = 0;
+          while (waitTrxEnd / 1000 >= sleepSec && this.chargingStation.getConnector(connectorId).currentSOC < this.chargingStation.getConnector(connectorId).desiredSOC ){
+              await Utils.sleep(1000);
+              sleepSec++;
+          }
+
           // Stop transaction
           logger.info(this.logPrefix(connectorId) + ' stop transaction ' + this.chargingStation.getConnector(connectorId).transactionId.toString());
           await this.stopTransaction(connectorId);

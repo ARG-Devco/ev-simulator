@@ -84,7 +84,9 @@ export default class OCPP16RequestService extends OCPPRequestService {
         meterStart: Utils.roundTo(this.chargingStation.getEnergyActiveImportRegisterByConnectorId(connectorId),0),
         timestamp: new Date().toISOString(),
       };
-      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to : 0`);
+      this.chargingStation.getConnector(connectorId).currentSOC = this.chargingStation.getConnector(connectorId).startSOC
+      this.chargingStation.getConnector(connectorId).authorizeIdTag = !Utils.isUndefined(idTag) ? idTag  : Constants.TRANSACTION_DEFAULT_IDTAG ;
+      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to : 0 W, with SOC: ${this.chargingStation.getConnector(connectorId).startSOC} %, using ${this.chargingStation.getConnector(connectorId).authorizeIdTag}`);
       return await this.sendMessage(Utils.generateUUID(), payload, MessageType.CALL_MESSAGE, OCPP16RequestCommand.START_TRANSACTION) as OCPP16StartTransactionResponse;
     } catch (error) {
       this.handleRequestError(OCPP16RequestCommand.START_TRANSACTION, error);
@@ -113,7 +115,11 @@ export default class OCPP16RequestService extends OCPPRequestService {
         ...reason && { reason },
         ...this.chargingStation.getTransactionDataMeterValues() && { transactionData: OCPP16ServiceUtils.buildTransactionDataMeterValues(this.chargingStation.getConnector(connectorId).transactionBeginMeterValue, transactionEndMeterValue) },
       };
-      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to : 0`);
+      const connector = this.chargingStation.getConnector(connectorId)
+      const batteryEnergy = connector.transactionEnergyActiveImportRegisterValue + ( connector.startSOC / 100.0 * (connector.batterySize))
+      const soc =  Number((batteryEnergy / (connector.batterySize ) * 100).toFixed(2))
+      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to : 0 W, with SOC: ${connector.currentSOC} %, using ${this.chargingStation.getConnector(connectorId).authorizeIdTag}`);
+
       return await this.sendMessage(Utils.generateUUID(), payload, MessageType.CALL_MESSAGE, OCPP16RequestCommand.STOP_TRANSACTION) as OCPP16StartTransactionResponse;
     } catch (error) {
       this.handleRequestError(OCPP16RequestCommand.STOP_TRANSACTION, error);
@@ -182,7 +188,6 @@ export default class OCPP16RequestService extends OCPPRequestService {
         const unitDivider = powerSampledValueTemplate?.unit === MeterValueUnit.KILO_WATT ? 1000 : 1;
         const ratedPower = Math.round(this.chargingStation.stationInfo.maxPower / this.chargingStation.stationInfo.powerDivider);
         const maxPower = this.chargingStation.getChargingProfileAllowablePower(connectorId, ratedPower);
-        logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to : ${maxPower}`);
         const maxPowerPerPhase = Math.round((this.chargingStation.stationInfo.maxPower / this.chargingStation.stationInfo.powerDivider) / this.chargingStation.getNumberOfPhases());
         switch (this.chargingStation.getCurrentOutType()) {
           case CurrentType.AC:
@@ -311,19 +316,20 @@ export default class OCPP16RequestService extends OCPPRequestService {
             !Utils.isNullOrUndefined(connector.transactionEnergyActiveImportRegisterValue) && connector.transactionEnergyActiveImportRegisterValue >= 0) {
           connector.energyActiveImportRegisterValue += energyMeasurandValue;
           connector.transactionEnergyActiveImportRegisterValue += energyMeasurandValue;
+          const unitDivider = energySampledValueTemplate?.unit === MeterValueUnit.KILO_WATT_HOUR ? 1000 : 1;
+          const batteryEnergy = connector.transactionEnergyActiveImportRegisterValue + ( connector.startSOC / 100.0 * (connector.batterySize / unitDivider)) ;
+          const socSampledValueTemplateValue = Number((batteryEnergy / (connector.batterySize / unitDivider) * 100).toFixed(2));
+          connector.currentSOC = socSampledValueTemplateValue;
+
         } else {
           connector.energyActiveImportRegisterValue = 0;
           connector.transactionEnergyActiveImportRegisterValue = 0;
+          connector.currentSOC = connector.startSOC;
         }
 
         if (socSampledValueTemplate) {
-          const unitDivider = energySampledValueTemplate?.unit === MeterValueUnit.KILO_WATT_HOUR ? 1000 : 1;
-          const batteryEnergy = connector.transactionEnergyActiveImportRegisterValue + ( connector.startSOC / 100.0 * (connector.batterySize / unitDivider))
-
-          const socSampledValueTemplateValue = socSampledValueTemplate.value
-            ? Number((batteryEnergy / (connector.batterySize / unitDivider) * 100).toFixed(2))
-            : Number((batteryEnergy / (connector.batterySize / unitDivider) * 100).toFixed(2));
-          meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, socSampledValueTemplateValue));
+          logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to : ${maxPower} W, with SOC: ${connector.currentSOC} % using ${this.chargingStation.getConnector(connectorId).authorizeIdTag}`);
+          meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, connector.currentSOC));
           const sampledValuesIndex = meterValue.sampledValue.length - 1;
           if (Utils.convertToInt(meterValue.sampledValue[sampledValuesIndex].value) > 100 || debug) {
             logger.error(`${this.chargingStation.logPrefix()} MeterValues measurand ${meterValue.sampledValue[sampledValuesIndex].measurand ?? OCPP16MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER}: connectorId ${connectorId}, transaction ${connector.transactionId}, value: ${meterValue.sampledValue[sampledValuesIndex].value}/100`);

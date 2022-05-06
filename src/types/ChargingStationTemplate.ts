@@ -27,6 +27,8 @@ export interface AutomaticTransactionGenerator {
   maxBatterySize: number,
   minStartSOC: number,
   maxStartSOC: number,
+  minCurrentSOC: number,
+  maxCurrentSOC: number,
   minDesiredSOC: number,
   maxDesiredSOC: number,
   minDuration: number;
