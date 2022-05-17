@@ -18,9 +18,9 @@ export interface Connector {
   transactionStarted?: boolean;
   transactionId?: number;
   batterySize?: number;
-  startSOC?:number;
-  currentSOC?:number;
-  desiredSOC?:number;
+  startEnergy?:number;
+  currentEnergy?:number;
+  desiredEnergy?:number;
   transactionSetInterval?: NodeJS.Timeout;
   transactionIdTag?: string;
   energyActiveImportRegisterValue?: number; // In Wh
