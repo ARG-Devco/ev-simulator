@@ -89,8 +89,8 @@ export default class OCPP16RequestService extends OCPPRequestService {
       const power = 0 ;
       const currentEnergy = this.chargingStation.getConnector(connectorId).currentEnergy ;
       const soc = Number(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100).toFixed(2) ;
-      const idtag = this.chargingStation.getConnector(connectorId).authorizeIdTag ;
-      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${idtag}`);
+      const vin = this.chargingStation.getConnector(connectorId).VIN ;
+      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${vin}`);
       return await this.sendMessage(Utils.generateUUID(), payload, MessageType.CALL_MESSAGE, OCPP16RequestCommand.START_TRANSACTION) as OCPP16StartTransactionResponse;
     } catch (error) {
       this.handleRequestError(OCPP16RequestCommand.START_TRANSACTION, error);
@@ -122,8 +122,8 @@ export default class OCPP16RequestService extends OCPPRequestService {
       const power = 0 ;
       const currentEnergy = this.chargingStation.getConnector(connectorId).currentEnergy ;
       const soc = Number(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100).toFixed(2) ;
-      const idtag = this.chargingStation.getConnector(connectorId).authorizeIdTag ;
-      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${idtag}`);
+      const vin = this.chargingStation.getConnector(connectorId).VIN ;
+      logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${vin}`);
 
       return await this.sendMessage(Utils.generateUUID(), payload, MessageType.CALL_MESSAGE, OCPP16RequestCommand.STOP_TRANSACTION) as OCPP16StartTransactionResponse;
     } catch (error) {
@@ -333,8 +333,8 @@ export default class OCPP16RequestService extends OCPPRequestService {
           const power = maxPower ;
           const currentEnergy = this.chargingStation.getConnector(connectorId).currentEnergy ;
           const soc = Number(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100).toFixed(2) ;
-          const idtag = this.chargingStation.getConnector(connectorId).authorizeIdTag ;
-          logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${idtag}`);
+          const vin = this.chargingStation.getConnector(connectorId).VIN ;
+          logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${vin}`);
 
           const currentSOC = this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100 ;
           meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, currentSOC));

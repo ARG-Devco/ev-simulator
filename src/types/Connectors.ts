@@ -14,6 +14,7 @@ export interface Connector {
   status?: ChargePointStatus;
   MeterValues: SampledValueTemplate[];
   authorizeIdTag?: string;
+  VIN?: string;
   authorized?: boolean;
   transactionStarted?: boolean;
   transactionId?: number;

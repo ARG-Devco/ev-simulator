@@ -39,6 +39,7 @@ export interface AutomaticTransactionGenerator {
   stopAfterHours: number;
   stopAfterNumberOfTransaction: number;
   stopOnConnectionFailure: boolean;
+  VIN: string;
   requireAuthorize?: boolean
 }
 

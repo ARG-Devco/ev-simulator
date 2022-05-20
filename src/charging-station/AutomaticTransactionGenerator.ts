@@ -119,6 +119,7 @@ export default class AutomaticTransactionGenerator {
           this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxStartEnergy);
         this.chargingStation.getConnector(connectorId).desiredEnergy = Utils.getRandomInt(this.chargingStation.stationInfo.AutomaticTransactionGenerator.minDesiredEnergy,
           this.chargingStation.stationInfo.AutomaticTransactionGenerator.maxDesiredEnergy);
+        this.chargingStation.getConnector(connectorId).VIN = this.chargingStation.stationInfo.AutomaticTransactionGenerator.VIN ;
 
         const startResponse = await this.startTransaction(connectorId);
         startedTransactions++;
