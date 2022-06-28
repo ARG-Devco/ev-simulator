@@ -1,6 +1,9 @@
 import { AvailabilityStatus, ChargingProfileStatus, ClearChargingProfileStatus, ConfigurationStatus, DefaultStatus, TriggerMessageStatus, UnlockStatus } from '../types/ocpp/Responses';
 
 import { MeterValueMeasurand } from '../types/ocpp/MeterValues';
+import {
+  GetCompositeScheduleStatus
+} from '../types/ocpp/1.6/Responses';
 
 export default class Constants {
   static readonly OCPP_RESPONSE_EMPTY = Object.freeze({});
@@ -24,6 +27,9 @@ export default class Constants {
   static readonly OCPP_TRIGGER_MESSAGE_RESPONSE_ACCEPTED = Object.freeze({ status: TriggerMessageStatus.ACCEPTED });
   static readonly OCPP_TRIGGER_MESSAGE_RESPONSE_REJECTED = Object.freeze({ status: TriggerMessageStatus.REJECTED });
   static readonly OCPP_TRIGGER_MESSAGE_RESPONSE_NOT_IMPLEMENTED = Object.freeze({ status: TriggerMessageStatus.NOT_IMPLEMENTED });
+  static readonly OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_ACCEPTED = Object.freeze({ status: GetCompositeScheduleStatus.ACCEPTED });
+  static readonly OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_REJECTED = Object.freeze({ status: GetCompositeScheduleStatus.REJECTED });
+
 
   static readonly OCPP_DEFAULT_BOOT_NOTIFICATION_INTERVAL = 60000; // Ms
   static readonly OCPP_ERROR_TIMEOUT = 60000; // Ms

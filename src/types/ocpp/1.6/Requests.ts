@@ -5,6 +5,7 @@ import { OCPP16ChargePointErrorCode } from './ChargePointErrorCode';
 import { OCPP16ChargePointStatus } from './ChargePointStatus';
 import { OCPP16DiagnosticsStatus } from './DiagnosticsStatus';
 import { OCPP16StandardParametersKey } from './Configuration';
+import {ChargingRateUnitType} from "../../ChargingStationTemplate";
 
 export enum OCPP16RequestCommand {
   BOOT_NOTIFICATION = 'BootNotification',
@@ -135,4 +136,11 @@ export enum MessageTrigger {
 export interface OCPP16TriggerMessageRequest {
   requestedMessage: MessageTrigger;
   connectorId?: number
+}
+
+export interface OCPP16GetCompositeScheduleRequest {
+  requestedMessage: MessageTrigger;
+  connectorId: number,
+  duration: number,
+  chargingRateUnit: ChargingRateUnitType
 }

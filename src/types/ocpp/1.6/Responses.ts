@@ -89,3 +89,31 @@ export enum OCPP16TriggerMessageStatus {
 export interface OCPP16TriggerMessageResponse {
   status: OCPP16TriggerMessageStatus
 }
+
+
+export enum GetCompositeScheduleStatus {
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected'
+}
+
+export interface OCPP16GetCompositeScheduleResponse {
+  status: GetCompositeScheduleStatus,
+  connectorId?: number,
+  scheduleStart?:string,
+  chargingSchedule?:OCPP16ChargingSchedule
+}
+
+export interface OCPP16ChargingSchedule {
+  duration?: number,
+  startSchedule?: string,
+  chargingRateUnit:string,
+  chargingSchedulePeriod: OCPP16ChargingSchedulePeriod,
+  minChargingRate?: number
+}
+
+export interface OCPP16ChargingSchedulePeriod {
+  startPeriod: number,
+  limit: number,
+  numberPhases?: number
+}
+

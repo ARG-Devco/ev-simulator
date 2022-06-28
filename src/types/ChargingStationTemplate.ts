@@ -12,6 +12,10 @@ export enum PowerUnits {
   WATT = 'W',
   KILO_WATT = 'kW',
 }
+export enum ChargingRateUnitType {
+  W = 'W',
+  A = 'A'
+}
 
 export enum Voltage {
   VOLTAGE_110 = 110,

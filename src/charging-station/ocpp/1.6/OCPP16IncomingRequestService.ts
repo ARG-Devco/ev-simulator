@@ -1,26 +1,59 @@
-import { ChangeAvailabilityRequest, ChangeConfigurationRequest, ClearChargingProfileRequest, GetConfigurationRequest, GetDiagnosticsRequest, MessageTrigger, OCPP16AvailabilityType, OCPP16IncomingRequestCommand, OCPP16TriggerMessageRequest, RemoteStartTransactionRequest, RemoteStopTransactionRequest, ResetRequest, SetChargingProfileRequest, UnlockConnectorRequest } from '../../../types/ocpp/1.6/Requests';
-import { ChangeAvailabilityResponse, ChangeConfigurationResponse, ClearChargingProfileResponse, GetConfigurationResponse, GetDiagnosticsResponse, OCPP16TriggerMessageResponse, SetChargingProfileResponse, UnlockConnectorResponse } from '../../../types/ocpp/1.6/Responses';
-import { ChargingProfilePurposeType, OCPP16ChargingProfile } from '../../../types/ocpp/1.6/ChargingProfile';
-import { Client, FTPResponse } from 'basic-ftp';
-import { IncomingRequestCommand, RequestCommand } from '../../../types/ocpp/Requests';
-import { OCPP16AuthorizationStatus, OCPP16StopTransactionReason } from '../../../types/ocpp/1.6/Transaction';
+import {
+  ChangeAvailabilityRequest,
+  ChangeConfigurationRequest,
+  ClearChargingProfileRequest,
+  GetConfigurationRequest,
+  GetDiagnosticsRequest,
+  MessageTrigger,
+  OCPP16AvailabilityType,
+  OCPP16GetCompositeScheduleRequest,
+  OCPP16IncomingRequestCommand,
+  OCPP16TriggerMessageRequest,
+  RemoteStartTransactionRequest,
+  RemoteStopTransactionRequest,
+  ResetRequest,
+  SetChargingProfileRequest,
+  UnlockConnectorRequest
+} from '../../../types/ocpp/1.6/Requests';
+import {
+  ChangeAvailabilityResponse,
+  ChangeConfigurationResponse,
+  ClearChargingProfileResponse,
+  GetConfigurationResponse,
+  GetDiagnosticsResponse,
+  OCPP16GetCompositeScheduleResponse,
+  OCPP16TriggerMessageResponse,
+  SetChargingProfileResponse,
+  UnlockConnectorResponse
+} from '../../../types/ocpp/1.6/Responses';
+import {
+  ChargingProfilePurposeType,
+  OCPP16ChargingProfile
+} from '../../../types/ocpp/1.6/ChargingProfile';
+import {Client, FTPResponse} from 'basic-ftp';
+import {IncomingRequestCommand, RequestCommand} from '../../../types/ocpp/Requests';
+import {
+  OCPP16AuthorizationStatus,
+  OCPP16StopTransactionReason
+} from '../../../types/ocpp/1.6/Transaction';
 
 import Constants from '../../../utils/Constants';
-import { DefaultResponse } from '../../../types/ocpp/Responses';
-import { ErrorType } from '../../../types/ocpp/ErrorType';
-import { MessageType } from '../../../types/ocpp/MessageType';
-import { OCPP16ChargePointStatus } from '../../../types/ocpp/1.6/ChargePointStatus';
-import { OCPP16DiagnosticsStatus } from '../../../types/ocpp/1.6/DiagnosticsStatus';
-import { OCPP16StandardParametersKey } from '../../../types/ocpp/1.6/Configuration';
-import { OCPPConfigurationKey } from '../../../types/ocpp/Configuration';
+import {DefaultResponse} from '../../../types/ocpp/Responses';
+import {ErrorType} from '../../../types/ocpp/ErrorType';
+import {MessageType} from '../../../types/ocpp/MessageType';
+import {OCPP16ChargePointStatus} from '../../../types/ocpp/1.6/ChargePointStatus';
+import {OCPP16DiagnosticsStatus} from '../../../types/ocpp/1.6/DiagnosticsStatus';
+import {OCPP16StandardParametersKey} from '../../../types/ocpp/1.6/Configuration';
+import {OCPPConfigurationKey} from '../../../types/ocpp/Configuration';
 import OCPPError from '../OCPPError';
 import OCPPIncomingRequestService from '../OCPPIncomingRequestService';
-import { URL } from 'url';
+import {URL} from 'url';
 import Utils from '../../../utils/Utils';
 import fs from 'fs';
 import logger from '../../../utils/Logger';
 import path from 'path';
 import tar from 'tar';
+
 const chalk = require('chalk');
 
 export default class OCPP16IncomingRequestService extends OCPPIncomingRequestService {
@@ -195,7 +228,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
   }
 
   private handleRequestClearChargingProfile(commandPayload: ClearChargingProfileRequest): ClearChargingProfileResponse {
-    commandPayload.connectorId = 1 ;
+    commandPayload.connectorId = 1;
 
     if (!this.chargingStation.getConnector(commandPayload.connectorId)) {
       logger.error(`${this.chargingStation.logPrefix()} Trying to clear a charging profile(s) to a non existing connector Id ${commandPayload.connectorId}`);
@@ -283,7 +316,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         if (this.chargingStation.getAuthorizeRemoteTxRequests()) {
           let authorized = false;
           if (this.chargingStation.getLocalAuthListEnabled() && this.chargingStation.hasAuthorizedTags()
-              && this.chargingStation.authorizedTags.find((value) => value === commandPayload.idTag)) {
+            && this.chargingStation.authorizedTags.find((value) => value === commandPayload.idTag)) {
             authorized = true;
           }
           if (!authorized || (authorized && this.chargingStation.getMayAuthorizeAtRemoteStart())) {
@@ -367,13 +400,13 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
       try {
         const logFiles = fs.readdirSync(path.resolve(__dirname, '../../../../')).filter((file) => file.endsWith('.log')).map((file) => path.join('./', file));
         const diagnosticsArchive = this.chargingStation.stationInfo.chargingStationId + '_logs.tar.gz';
-        tar.create({ gzip: true }, logFiles).pipe(fs.createWriteStream(diagnosticsArchive));
+        tar.create({gzip: true}, logFiles).pipe(fs.createWriteStream(diagnosticsArchive));
         ftpClient = new Client();
         const accessResponse = await ftpClient.access({
           host: uri.host,
-          ...(uri.port !== '') && { port: Utils.convertToInt(uri.port) },
-          ...(uri.username !== '') && { user: uri.username },
-          ...(uri.password !== '') && { password: uri.password },
+          ...(uri.port !== '') && {port: Utils.convertToInt(uri.port)},
+          ...(uri.username !== '') && {user: uri.username},
+          ...(uri.password !== '') && {password: uri.password},
         });
         let uploadResponse: FTPResponse;
         if (accessResponse.code === 220) {
@@ -388,7 +421,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
             if (ftpClient) {
               ftpClient.close();
             }
-            return { fileName: diagnosticsArchive };
+            return {fileName: diagnosticsArchive};
           }
           throw new OCPPError(ErrorType.GENERIC_ERROR, `Diagnostics transfer failed with error code ${accessResponse.code.toString()}${uploadResponse?.code && '|' + uploadResponse?.code.toString()}`, IncomingRequestCommand.GET_DIAGNOSTICS);
         }
@@ -414,12 +447,14 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
           setTimeout(() => {
             this.chargingStation.ocppRequestService.sendBootNotification(this.chargingStation.getBootNotificationRequest().chargePointModel,
               this.chargingStation.getBootNotificationRequest().chargePointVendor, this.chargingStation.getBootNotificationRequest().chargeBoxSerialNumber,
-              this.chargingStation.getBootNotificationRequest().firmwareVersion).catch(() => { /* This is intentional */ });
+              this.chargingStation.getBootNotificationRequest().firmwareVersion).catch(() => { /* This is intentional */
+            });
           }, Constants.OCPP_TRIGGER_MESSAGE_DELAY);
           return Constants.OCPP_TRIGGER_MESSAGE_RESPONSE_ACCEPTED;
         case MessageTrigger.Heartbeat:
           setTimeout(() => {
-            this.chargingStation.ocppRequestService.sendHeartbeat().catch(() => { /* This is intentional */ });
+            this.chargingStation.ocppRequestService.sendHeartbeat().catch(() => { /* This is intentional */
+            });
           }, Constants.OCPP_TRIGGER_MESSAGE_DELAY);
           return Constants.OCPP_TRIGGER_MESSAGE_RESPONSE_ACCEPTED;
         default:
@@ -428,5 +463,10 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     } catch (error) {
       return this.handleIncomingRequestError(IncomingRequestCommand.TRIGGER_MESSAGE, error, Constants.OCPP_TRIGGER_MESSAGE_RESPONSE_REJECTED);
     }
+  }
+
+  private handleRequestGetCompositeSchedule(commandPayload: OCPP16GetCompositeScheduleRequest): OCPP16GetCompositeScheduleResponse {
+
+    return Constants.OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_REJECTED;
   }
 }

@@ -418,18 +418,77 @@ export default class ChargingStation {
     let allowablePower = maxPower;
     if (!Utils.isEmptyArray(this.getConnector(connectorId).chargingProfiles)) {
       this.getConnector(connectorId).chargingProfiles?.forEach((chargingProfile: ChargingProfile, index: number) => {
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.chargingRateUnit}`);
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit}`);
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingSchedule.minChargeRate}`);
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingProfilePurpose}`);
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.chargingProfileKind}`);
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.validFrom}`);
-        logger.debug(this.logPrefix() + `GetChargingProfile${index.toString()}: ${chargingProfile.validTo}`);
+
+        let time = new Date().getTime() - new Date("2013-02-20T12:01:04.753Z").getTime();
+
+        logger.debug(this.logPrefix() + `Connector: ${connectorId.toString()}`);
+        logger.debug(this.logPrefix() + `Index: ${index.toString()}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingRateUnit: ${chargingProfile.chargingSchedule.chargingRateUnit}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingSchedule: ${chargingProfile.chargingSchedule}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile limit : ${chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile startPeriod : ${chargingProfile.chargingSchedule.chargingSchedulePeriod[0].startPeriod}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingSchedulePeriod: ${chargingProfile.chargingSchedule.chargingSchedulePeriod}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile minChargeRate: ${chargingProfile.chargingSchedule.minChargeRate}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingProfilePurpose: ${chargingProfile.chargingProfilePurpose}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingProfileKind: ${chargingProfile.chargingProfileKind}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile validFrom: ${chargingProfile.validFrom}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile validTo: ${chargingProfile.validTo}`);
+
         if (chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit < allowablePower) {
           allowablePower = chargingProfile.chargingSchedule.chargingSchedulePeriod[0].limit;
         }
       })
+    } else if (!Utils.isEmptyArray(this.getConnector(0).chargingProfiles)) {
+      this.getConnector(0).chargingProfiles?.forEach((chargingProfile: ChargingProfile, index: number) => {
+        logger.debug(this.logPrefix() + `Connector: 0`);
+        logger.debug(this.logPrefix() + `Index: ${index.toString()}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingRateUnit: ${chargingProfile.chargingSchedule.chargingRateUnit}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingSchedule: ${JSON.stringify(chargingProfile.chargingSchedule)}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile startSchedule: ${chargingProfile.chargingSchedule.startSchedule}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile currentTime: ${JSON.stringify(new Date().getTime())}`);
+
+        let currentTime = new Date().getTime();
+        let startScheduleTime = new Date(chargingProfile.chargingSchedule.startSchedule).getTime();
+        let duration = chargingProfile.chargingSchedule.duration
+
+        if (currentTime > startScheduleTime && currentTime < startScheduleTime + (duration * 1000)) {
+          // Profile valid
+          try {
+            let max_start_period = 0;
+            let elapsed_seconds = (currentTime - startScheduleTime) / 1000;
+
+
+            chargingProfile.chargingSchedule.chargingSchedulePeriod.forEach((period: ChargingSchedulePeriod, cspIndex: number) => {
+
+              logger.debug(this.logPrefix() + `Looping ChargingSchedulePeriod${cspIndex.toString()}`);
+              logger.debug(this.logPrefix() + `GetChargingProfile limit : ${period.limit}`);
+              logger.debug(this.logPrefix() + `GetChargingProfile startPeriod : ${period.startPeriod}`);
+              logger.debug(this.logPrefix() + `GetChargingProfile elapsed_seconds : ${elapsed_seconds}`);
+              logger.debug(this.logPrefix() + `GetChargingProfile max_start_period : ${max_start_period}`);
+
+              if (elapsed_seconds > period.startPeriod && period.startPeriod >= max_start_period) {
+                allowablePower = period.limit;
+                max_start_period = period.startPeriod;
+                logger.debug(this.logPrefix() + `Modified Allowable : ${allowablePower}`);
+                logger.debug(this.logPrefix() + `Modified max_start_period : ${max_start_period}`);
+              }
+            })
+
+          } catch (error) {
+            logger.debug(this.logPrefix() + `Error:  ${JSON.stringify(error)}`);
+          }
+
+        }
+
+        logger.debug(this.logPrefix() + `GetChargingProfile minChargeRate: ${chargingProfile.chargingSchedule.minChargeRate}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingProfilePurpose: ${chargingProfile.chargingProfilePurpose}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile chargingProfileKind: ${chargingProfile.chargingProfileKind}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile validFrom: ${chargingProfile.validFrom}`);
+        logger.debug(this.logPrefix() + `GetChargingProfile validTo: ${chargingProfile.validTo}`);
+
+      })
     }
+
     return allowablePower;
   }
 
