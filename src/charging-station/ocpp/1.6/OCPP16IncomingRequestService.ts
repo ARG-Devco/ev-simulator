@@ -53,6 +53,7 @@ import fs from 'fs';
 import logger from '../../../utils/Logger';
 import path from 'path';
 import tar from 'tar';
+import {ChargePointStatus} from "../../../types/ocpp/ChargePointStatus";
 
 const chalk = require('chalk');
 
@@ -449,6 +450,16 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
               this.chargingStation.getBootNotificationRequest().chargePointVendor, this.chargingStation.getBootNotificationRequest().chargeBoxSerialNumber,
               this.chargingStation.getBootNotificationRequest().firmwareVersion).catch(() => { /* This is intentional */
             });
+          }, Constants.OCPP_TRIGGER_MESSAGE_DELAY);
+          return Constants.OCPP_TRIGGER_MESSAGE_RESPONSE_ACCEPTED;
+        case MessageTrigger.StatusNotification:
+          setTimeout(() => {
+            for (const connector in this.chargingStation.connectors) {
+              if (Utils.convertToInt(connector) > 0) {
+                this.chargingStation.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.chargingStation.getConnector(Utils.convertToInt(connector)).status).catch(() => { /* This is intentional */
+                });
+              }
+            }
           }, Constants.OCPP_TRIGGER_MESSAGE_DELAY);
           return Constants.OCPP_TRIGGER_MESSAGE_RESPONSE_ACCEPTED;
         case MessageTrigger.Heartbeat:
