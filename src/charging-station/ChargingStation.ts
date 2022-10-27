@@ -50,6 +50,7 @@ import fs from 'fs';
 import logger from '../utils/Logger';
 import path from 'path';
 import {ChargingRateUnitType, ChargingSchedulePeriod} from "../types/ocpp/1.6/ChargingProfile";
+import {OCPP16ChargePointErrorCode} from "../types/ocpp/1.6/ChargePointErrorCode";
 
 export default class ChargingStation {
   public stationTemplateFile: string;
@@ -941,21 +942,23 @@ export default class ChargingStation {
     for (const connector in this.connectors) {
       if (Utils.convertToInt(connector) === 0) {
         continue;
-      } else if (!this.stopped && !this.getConnector(Utils.convertToInt(connector))?.status && this.getConnector(Utils.convertToInt(connector))?.bootStatus) {
+      } else if (!this.stopped && !this.getConnector(Utils.convertToInt(connector))?.status && this.getConnector(Utils.convertToInt(connector))?.bootStatus && this.getConnector(Utils.convertToInt(connector))?.errorCode) {
         // Send status in template at startup
-        await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.getConnector(Utils.convertToInt(connector)).bootStatus);
+        await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.getConnector(Utils.convertToInt(connector)).bootStatus, this.getConnector(Utils.convertToInt(connector)).errorCode);
         this.getConnector(Utils.convertToInt(connector)).status = this.getConnector(Utils.convertToInt(connector)).bootStatus;
-      } else if (this.stopped && this.getConnector(Utils.convertToInt(connector))?.bootStatus) {
+      } else if (this.stopped && this.getConnector(Utils.convertToInt(connector))?.bootStatus && this.getConnector(Utils.convertToInt(connector))?.errorCode) {
         // Send status in template after reset
-        await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.getConnector(Utils.convertToInt(connector)).bootStatus);
+        await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.getConnector(Utils.convertToInt(connector)).bootStatus, this.getConnector(Utils.convertToInt(connector)).errorCode);
         this.getConnector(Utils.convertToInt(connector)).status = this.getConnector(Utils.convertToInt(connector)).bootStatus;
-      } else if (!this.stopped && this.getConnector(Utils.convertToInt(connector))?.status) {
+      } else if (!this.stopped && this.getConnector(Utils.convertToInt(connector))?.status && this.getConnector(Utils.convertToInt(connector))?.errorCode) {
         // Send previous status at template reload
-        await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.getConnector(Utils.convertToInt(connector)).status);
+        await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), this.getConnector(Utils.convertToInt(connector)).status, this.getConnector(Utils.convertToInt(connector)).errorCode);
       } else {
         // Send default status
         await this.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), ChargePointStatus.AVAILABLE);
         this.getConnector(Utils.convertToInt(connector)).status = ChargePointStatus.AVAILABLE;
+        this.getConnector(Utils.convertToInt(connector)).errorCode = OCPP16ChargePointErrorCode.NO_ERROR;
+
       }
     }
     // Start the ATG
