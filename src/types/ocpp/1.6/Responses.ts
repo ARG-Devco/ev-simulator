@@ -96,11 +96,24 @@ export enum GetCompositeScheduleStatus {
   REJECTED = 'Rejected'
 }
 
+export enum DataTransferStatus {
+  ACCEPTED = 'Accepted',
+  REJECTED = 'Rejected',
+  UNKNOWNMESSAGEID = 'UnknownMessageId',
+
+  UNKNOWNVENDORID ='UnknownVendorId'
+
+}
+
 export interface OCPP16GetCompositeScheduleResponse {
   status: GetCompositeScheduleStatus,
   connectorId?: number,
   scheduleStart?:string,
   chargingSchedule?:OCPP16ChargingSchedule
+}
+
+export interface OCPP16DataTransferResponse{
+  status: DataTransferStatus
 }
 
 export interface OCPP16ChargingSchedule {

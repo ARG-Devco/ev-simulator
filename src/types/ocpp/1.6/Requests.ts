@@ -31,7 +31,9 @@ export enum OCPP16IncomingRequestCommand {
   REMOTE_START_TRANSACTION = 'RemoteStartTransaction',
   REMOTE_STOP_TRANSACTION = 'RemoteStopTransaction',
   GET_DIAGNOSTICS = 'GetDiagnostics',
-  TRIGGER_MESSAGE = 'TriggerMessage'
+  TRIGGER_MESSAGE = 'TriggerMessage',
+
+  DATA_TRANSFER = 'DataTransfer'
 }
 
 export type HeartbeatRequest = EmptyObject;
@@ -143,4 +145,10 @@ export interface OCPP16GetCompositeScheduleRequest {
   connectorId: number,
   duration: number,
   chargingRateUnit: ChargingRateUnitType
+}
+
+export interface OCPP16DataTransferRequest {
+  vendorId: string;
+  messageId: string,
+  data: string
 }

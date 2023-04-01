@@ -6,6 +6,7 @@ import {
   GetDiagnosticsRequest,
   MessageTrigger,
   OCPP16AvailabilityType,
+  OCPP16DataTransferRequest,
   OCPP16GetCompositeScheduleRequest,
   OCPP16IncomingRequestCommand,
   OCPP16TriggerMessageRequest,
@@ -21,6 +22,7 @@ import {
   ClearChargingProfileResponse,
   GetConfigurationResponse,
   GetDiagnosticsResponse,
+  OCPP16DataTransferResponse,
   OCPP16GetCompositeScheduleResponse,
   OCPP16TriggerMessageResponse,
   SetChargingProfileResponse,
@@ -480,4 +482,30 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
 
     return Constants.OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_REJECTED;
   }
+
+  private handleRequestDataTransfer(commandPayload: OCPP16DataTransferRequest): OCPP16DataTransferResponse {
+    try {
+
+      if (commandPayload.vendorId == "SIMULATOR" && commandPayload.messageId == "ChangeATG") {
+        console.log(commandPayload.data);
+        const command = JSON.parse(commandPayload.data);
+
+        this.chargingStation.changeAutomaticTransactionGenerator(command.idTag, command.batterySize, command.startEnergy, command.desiredEnergy, command.duration, command.vin);
+
+        return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
+
+
+      } else if (commandPayload.vendorId == "SIMULATOR") {
+        return Constants.OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNMESSAGEID;
+
+      } else {
+        // return this.handleIncomingRequestError(IncomingRequestCommand.DATA_TRANSFER, error, Constants.OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNVENDORID);
+        return Constants.OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNVENDORID;
+      }
+
+    } catch (error) {
+      return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+    }
+  }
+
 }

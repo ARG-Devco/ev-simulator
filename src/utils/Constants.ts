@@ -2,6 +2,7 @@ import { AvailabilityStatus, ChargingProfileStatus, ClearChargingProfileStatus, 
 
 import { MeterValueMeasurand } from '../types/ocpp/MeterValues';
 import {
+  DataTransferStatus,
   GetCompositeScheduleStatus
 } from '../types/ocpp/1.6/Responses';
 
@@ -30,6 +31,10 @@ export default class Constants {
   static readonly OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_ACCEPTED = Object.freeze({ status: GetCompositeScheduleStatus.ACCEPTED });
   static readonly OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_REJECTED = Object.freeze({ status: GetCompositeScheduleStatus.REJECTED });
 
+  static readonly OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED = Object.freeze({ status: DataTransferStatus.ACCEPTED });
+  static readonly OCPP_DATA_TRANSFER_RESPONSE_REJECTED = Object.freeze({ status: DataTransferStatus.REJECTED });
+  static readonly OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNVENDORID = Object.freeze({ status: DataTransferStatus.UNKNOWNVENDORID });
+  static readonly OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNMESSAGEID = Object.freeze({ status: DataTransferStatus.UNKNOWNMESSAGEID });
 
   static readonly OCPP_DEFAULT_BOOT_NOTIFICATION_INTERVAL = 60000; // Ms
   static readonly OCPP_ERROR_TIMEOUT = 60000; // Ms

@@ -1141,6 +1141,31 @@ export default class ChargingStation {
     }
   }
 
+  public changeAutomaticTransactionGenerator(rfid: string, batterySize: number, startEnergy: number, desiredEnergy: number, duration: number, vin: string): void {
+    console.log("Restart ATG");
+
+    if (!this.stationInfo.AutomaticTransactionGenerator.enable &&
+      this.automaticTransactionGenerator && this.automaticTransactionGenerator.started) {
+      this.automaticTransactionGenerator.stop();
+    }
+    delete this.automaticTransactionGenerator ;
+    this.stationInfo.AutomaticTransactionGenerator.enable = true ;
+
+    this.authorizedTags[0] = rfid
+
+    this.stationInfo.AutomaticTransactionGenerator.minBatterySize = batterySize;
+    this.stationInfo.AutomaticTransactionGenerator.maxBatterySize = batterySize ;
+    this.stationInfo.AutomaticTransactionGenerator.minStartEnergy = startEnergy;
+    this.stationInfo.AutomaticTransactionGenerator.maxStartEnergy = startEnergy ;
+    this.stationInfo.AutomaticTransactionGenerator.minDesiredEnergy = desiredEnergy;
+    this.stationInfo.AutomaticTransactionGenerator.maxDesiredEnergy = desiredEnergy;
+    this.stationInfo.AutomaticTransactionGenerator.minDuration = duration;
+    this.stationInfo.AutomaticTransactionGenerator.maxDuration = duration;
+    this.stationInfo.AutomaticTransactionGenerator.VIN = vin ;
+
+    this.startAutomaticTransactionGenerator();
+  }
+
   private getReconnectExponentialDelay(): boolean | undefined {
     return !Utils.isUndefined(this.stationInfo.reconnectExponentialDelay) ? this.stationInfo.reconnectExponentialDelay : false;
   }
