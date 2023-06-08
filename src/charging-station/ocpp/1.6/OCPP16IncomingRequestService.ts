@@ -483,7 +483,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     return Constants.OCPP_GET_COMPOSITE_SCHEDULE_RESPONSE_REJECTED;
   }
 
-  private handleRequestDataTransfer(commandPayload: OCPP16DataTransferRequest): OCPP16DataTransferResponse {
+  private async handleRequestDataTransfer(commandPayload: OCPP16DataTransferRequest): Promise<OCPP16DataTransferResponse> {
     try {
 
       if (commandPayload.vendorId == "SIMULATOR" && commandPayload.messageId == "ChangeATG") {
@@ -495,6 +495,40 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
 
 
+      } else if (commandPayload.vendorId == "SIMULATOR" && commandPayload.messageId == "PluggedIn") {
+
+        console.log(commandPayload.data);
+        const data = JSON.parse(commandPayload.data);
+        const connectorId = data.connectorId;
+
+        if (connectorId > 0 && (this.chargingStation.getConnector(connectorId).availability === OCPP16AvailabilityType.OPERATIVE && this.chargingStation.getConnector(connectorId).status === OCPP16ChargePointStatus.AVAILABLE)) {
+          this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.PREPARING;
+          await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.PREPARING);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
+        }
+
+        return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+      } else if (commandPayload.vendorId == "SIMULATOR" && commandPayload.messageId == "Unplugged") {
+
+        console.log(commandPayload.data);
+        const data = JSON.parse(commandPayload.data);
+        const connectorId = data.connectorId;
+
+        if (connectorId > 0 && (this.chargingStation.getConnector(connectorId).availability === OCPP16AvailabilityType.OPERATIVE && this.chargingStation.getConnector(connectorId).status === OCPP16ChargePointStatus.PREPARING)) {
+          this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.AVAILABLE;
+          await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.AVAILABLE);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
+        } else if (connectorId > 0 && (this.chargingStation.getConnector(connectorId).availability === OCPP16AvailabilityType.OPERATIVE && this.chargingStation.getConnector(connectorId).status === OCPP16ChargePointStatus.CHARGING)) {
+          const transactionId = this.chargingStation.getConnector(connectorId).transactionId;
+          await this.chargingStation.ocppRequestService.sendStatusNotification(Utils.convertToInt(connectorId), OCPP16ChargePointStatus.FINISHING);
+          this.chargingStation.getConnector(Utils.convertToInt(connectorId)).status = OCPP16ChargePointStatus.FINISHING;
+          await this.chargingStation.ocppRequestService.sendStopTransaction(transactionId, this.chargingStation.getEnergyActiveImportRegisterByTransactionId(transactionId),
+            this.chargingStation.getTransactionIdTag(transactionId));
+
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
+        }
+
+        return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
       } else if (commandPayload.vendorId == "SIMULATOR") {
         return Constants.OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNMESSAGEID;
 
