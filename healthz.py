@@ -1,6 +1,8 @@
 import cherrypy
 import os
 import glob
+cherrypy.server.socket_host = '0.0.0.0'
+
 file_pattern = "/usr/app/combined*"
 last_size = -1
 
