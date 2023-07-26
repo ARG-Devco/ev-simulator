@@ -313,8 +313,8 @@ export default class OCPP16RequestService extends OCPPRequestService {
         const maxPower = this.chargingStation.getChargingProfileAllowablePower(connectorId, ratedPower);
         const energyMeasurandValue = energySampledValueTemplate.value
           // Cumulate the fluctuated value around the static one
-          ? (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval)
-          : (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval);
+          ? (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval) / unitDivider
+          : (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval) / unitDivider;
 
         // Persist previous value on connector
         if (connector && !Utils.isNullOrUndefined(connector.energyActiveImportRegisterValue) && connector.energyActiveImportRegisterValue >= 0 &&
@@ -332,12 +332,11 @@ export default class OCPP16RequestService extends OCPPRequestService {
 
           const power = maxPower ;
           const currentEnergy = this.chargingStation.getConnector(connectorId).currentEnergy ;
-          const soc = Number(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100).toFixed(2) ;
           const vin = this.chargingStation.getConnector(connectorId).VIN ;
+          const soc = Math.floor(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100) ;
           logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${vin}`);
 
-          const currentSOC = this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100 ;
-          meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, currentSOC));
+          meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, soc));
           const sampledValuesIndex = meterValue.sampledValue.length - 1;
           if (Utils.convertToInt(meterValue.sampledValue[sampledValuesIndex].value) > 100 || debug) {
             logger.error(`${this.chargingStation.logPrefix()} MeterValues measurand ${meterValue.sampledValue[sampledValuesIndex].measurand ?? OCPP16MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER}: connectorId ${connectorId}, transaction ${connector.transactionId}, value: ${meterValue.sampledValue[sampledValuesIndex].value}/100`);
