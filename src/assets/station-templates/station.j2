@@ -12,7 +12,7 @@
   "powerSharedByConnectors": true,
   "currentOutType": "{{ currentType }}",
   "numberOfPhases":0,
-  "numberOfConnectors": 1,
+  "numberOfConnectors": {{ connectors | length }},
   "randomConnectors": false,
   "beginEndMeterValues" : false,
   "outOfOrderEndMeterValues" : false,
@@ -92,8 +92,8 @@
     "VIN": "ABC"
   },
   "Connectors": {
-    "0": {},
-    "1": {
+    {% for element in connectors %}
+    "{{ element }}": {
       "bootStatus": "Available",
       "MeterValues": [
         {
@@ -119,7 +119,9 @@
           "format":"Raw",
           "location": "EV",
           "fluctuationPercent": "0"
-        }
+        },
+      {% endfor %}
+        "0": {}
       ]
     }
   }
