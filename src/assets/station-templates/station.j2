@@ -93,7 +93,7 @@
   },
   "Connectors": {
     {% for element in connectors %}
-    "{{ element }}": {
+        "{{ element }}": {
       "bootStatus": "Available",
       "MeterValues": [
         {
@@ -119,7 +119,9 @@
           "format":"Raw",
           "location": "EV",
           "fluctuationPercent": "0"
-        },
+        }
+      ]
+    },
       {% endfor %}
         "0": {}
       ]
