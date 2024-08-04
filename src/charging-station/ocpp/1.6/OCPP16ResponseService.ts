@@ -14,11 +14,9 @@ const chalk = require('chalk');
 export default class OCPP16ResponseService extends OCPPResponseService {
   public async handleResponse(commandName: OCPP16RequestCommand, payload: Record<string, unknown> | string, requestPayload: Record<string, unknown>): Promise<void> {
     logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "---------"));
-    logger.debug(' %j', requestPayload);
-    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Received: ` + commandName.toString() + "Response"));
-    logger.debug('%j', payload);
-    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Done: ` + commandName.toString() + "---------"));
-
+    logger.debug(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + " " + JSON.stringify(requestPayload));
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Received: ` + commandName.toString() + "Response"+ "---------"));
+    logger.debug(`${this.chargingStation.logPrefix()} OCPP Received: ` + commandName.toString() + "Response" + " " + JSON.stringify(payload));
 
     const responseCallbackMethodName = `handleResponse${commandName}`;
     if (typeof this[responseCallbackMethodName] === 'function') {

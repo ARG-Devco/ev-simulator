@@ -384,7 +384,7 @@ export default class ChargingStation {
         reboot,
       });
     } else {
-      logger.error(`${this.logPrefix()} Trying to add an already existing configuration key: %j`, keyFound);
+      logger.error(`${this.logPrefix()} Trying to add an already existing configuration key: ` + JSON.stringify(keyFound));
     }
   }
 
@@ -394,10 +394,10 @@ export default class ChargingStation {
       const keyIndex = this.configuration.configurationKey.indexOf(keyFound);
       this.configuration.configurationKey[keyIndex].value = value;
     } else {
-      logger.error(`${this.logPrefix()} Trying to set a value on a non existing configuration key: %j`, {
+      logger.error(`${this.logPrefix()} Trying to set a value on a non existing configuration key: ` + JSON.stringify({
         key,
         value
-      });
+      }));
     }
   }
 

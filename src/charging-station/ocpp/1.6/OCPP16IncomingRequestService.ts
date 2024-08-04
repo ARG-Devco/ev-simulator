@@ -64,7 +64,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     let response;
     const methodName = `handleRequest${commandName}`;
     logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Incoming command: ` + commandName.toString() + "---------"));
-    logger.debug(' %j', commandPayload);
+    logger.debug(`${this.chargingStation.logPrefix()} OCPP Incoming command: ` + commandName.toString() + " " + commandPayload.toString());
 
     // Call
     if (typeof this[methodName] === 'function') {
@@ -73,7 +73,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         response = await this[methodName](commandPayload);
       } catch (error) {
         // Log
-        logger.error(this.chargingStation.logPrefix() + ' Handle request error: %j', error);
+        logger.error(this.chargingStation.logPrefix() + ' Handle request error: '+ error.toString());
         // Send back an error response to inform backend
         await this.chargingStation.ocppRequestService.sendError(messageId, error, commandName);
         throw error;
@@ -86,9 +86,8 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     }
     // Send the built response
     await this.chargingStation.ocppRequestService.sendMessage(messageId, response, MessageType.CALL_RESULT_MESSAGE, commandName);
-    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "Response"));
-    logger.debug('%j', response);
-    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Done: ` + commandName.toString() + "---------"));
+    logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "Response --------"));
+    logger.debug(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "Response "+ JSON.stringify(response));
   }
 
   // Simulate charging station restart
@@ -226,7 +225,8 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     //   return Constants.OCPP_SET_CHARGING_PROFILE_RESPONSE_REJECTED;
     // }
     this.chargingStation.setChargingProfile(commandPayload.connectorId, commandPayload.csChargingProfiles);
-    logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) set, dump their stack: %j`, this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles);
+    const strProfile = (JSON.stringify(this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles));
+    logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) set, dump their stack: ` + strProfile);
     return Constants.OCPP_SET_CHARGING_PROFILE_RESPONSE_ACCEPTED;
   }
 
@@ -239,7 +239,8 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     }
     if (commandPayload.connectorId) {
       this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles = [];
-      logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) cleared, dump their stack: %j`, this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles);
+      const strProfile = JSON.stringify(this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles);
+      logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) cleared, dump their stack: ` + strProfile);
       return Constants.OCPP_CLEAR_CHARGING_PROFILE_RESPONSE_ACCEPTED;
     }
 
@@ -263,7 +264,8 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
             }
             if (clearCurrentCP) {
               this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles[index] = {} as OCPP16ChargingProfile;
-              logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) cleared, dump their stack: %j`, this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles);
+              const strProfile = (JSON.stringify(this.chargingStation.getConnector(commandPayload.connectorId).chargingProfiles));
+              logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) cleared, dump their stack: ` + strProfile);
               clearedCP = true;
             }
           });
@@ -370,7 +372,8 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
   private setRemoteStartTransactionChargingProfile(connectorId: number, cp: OCPP16ChargingProfile): boolean {
     if (cp && cp.chargingProfilePurpose === ChargingProfilePurposeType.TX_PROFILE) {
       this.chargingStation.setChargingProfile(connectorId, cp);
-      logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) set at remote start transaction, dump their stack: %j`, this.chargingStation.getConnector(connectorId).chargingProfiles);
+      const strProfile = JSON.stringify(this.chargingStation.getConnector(connectorId).chargingProfiles.toString());
+      logger.debug(`${this.chargingStation.logPrefix()} Charging profile(s) set at remote start transaction, dump their stack: ` + strProfile) ;
       return true;
     } else if (cp && cp.chargingProfilePurpose !== ChargingProfilePurposeType.TX_PROFILE) {
       logger.warn(`${this.chargingStation.logPrefix()} Not allowed to set ${cp.chargingProfilePurpose} charging profile(s) at remote start transaction`);
@@ -396,7 +399,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
   }
 
   private async handleRequestGetDiagnostics(commandPayload: GetDiagnosticsRequest): Promise<GetDiagnosticsResponse> {
-    logger.debug(this.chargingStation.logPrefix() + ' ' + IncomingRequestCommand.GET_DIAGNOSTICS + ' request received: %j', commandPayload);
+    logger.debug(this.chargingStation.logPrefix() + ' ' + IncomingRequestCommand.GET_DIAGNOSTICS + ' request received: ' + commandPayload.toString());
     const uri = new URL(commandPayload.location);
     if (uri.protocol.startsWith('ftp:')) {
       let ftpClient: Client;
