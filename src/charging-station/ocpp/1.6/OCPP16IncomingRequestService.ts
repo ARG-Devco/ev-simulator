@@ -70,7 +70,10 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     if (typeof this[methodName] === 'function') {
       try {
         // Call the method to build the response
-        response = await this[methodName](commandPayload);
+        response = await this[methodName](commandPayload, messageId, commandName);
+        if(response !== null) {
+          await this.chargingStation.ocppRequestService.sendMessage(messageId, response, MessageType.CALL_RESULT_MESSAGE, commandName);
+        }
       } catch (error) {
         // Log
         logger.error(this.chargingStation.logPrefix() + ' Handle request error: '+ error.toString());
@@ -85,7 +88,6 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
       throw error;
     }
     // Send the built response
-    await this.chargingStation.ocppRequestService.sendMessage(messageId, response, MessageType.CALL_RESULT_MESSAGE, commandName);
     logger.debug(chalk.green(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "Response --------"));
     logger.debug(`${this.chargingStation.logPrefix()} OCPP Sent: ` + commandName.toString() + "Response "+ JSON.stringify(response));
   }
@@ -311,7 +313,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
     return Constants.OCPP_AVAILABILITY_RESPONSE_REJECTED;
   }
 
-  private async handleRequestRemoteStartTransaction(commandPayload: RemoteStartTransactionRequest): Promise<DefaultResponse> {
+  private async handleRequestRemoteStartTransaction(commandPayload: RemoteStartTransactionRequest, messageId: string, commandName: OCPP16IncomingRequestCommand): Promise<DefaultResponse> {
     const transactionConnectorId: number = commandPayload.connectorId;
     if (transactionConnectorId) {
       await this.chargingStation.ocppRequestService.sendStatusNotification(transactionConnectorId, OCPP16ChargePointStatus.PREPARING);
@@ -335,9 +337,10 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
           if (authorized) {
             // Authorization successful, start transaction
             if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
+              await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
               if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
                 logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
-                return Constants.OCPP_RESPONSE_ACCEPTED;
+                return null;
               }
               return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
             }
@@ -347,10 +350,11 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         }
         // No authorization check required, start transaction
         if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
-            logger.debug("Does not await Start Transaction");
-            this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag) ;
+          await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
+          if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
             logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
-            return Constants.OCPP_RESPONSE_ACCEPTED;
+            return null;
+          }
         }
         return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
       }
