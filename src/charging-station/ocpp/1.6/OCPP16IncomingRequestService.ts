@@ -351,11 +351,6 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         // No authorization check required, start transaction
         if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
           await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
-          logger.debug(this.chargingStation.logPrefix() + ' Initiating start transaction delay');
-          setTimeout(() => {
-            logger.debug(this.chargingStation.logPrefix() + ' This is a timeout to delay start transaction by 10 seconds');
-          }, 10000);
-          logger.debug(this.chargingStation.logPrefix() + ' Start transaction delay completed');
           if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
             logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
             return null;
