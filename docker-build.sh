@@ -1,2 +1,2 @@
 #!/bin/sh
-docker buildx build --platform=linux/amd64 -t ev-simulator:$1 .
+docker buildx build --platform=linux/amd64 -t ev-simulator:local .

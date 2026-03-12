@@ -33,7 +33,8 @@ export default {
     }),
     copy({
       targets: [
-        { src: 'src/assets', dest: 'dist/' }
+        { src: 'src/assets', dest: 'dist/' },
+        { src: 'config.json', dest: 'dist/assets/' }
       ]
     }),
     isDevelopmentBuild && analyze()

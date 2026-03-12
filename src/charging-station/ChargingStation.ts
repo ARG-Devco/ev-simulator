@@ -36,6 +36,7 @@ import FileUtils from '../utils/FileUtils';
 import {MessageType} from '../types/ocpp/MessageType';
 import OCPP16IncomingRequestService from './ocpp/1.6/OCPP16IncomingRequestService';
 import OCPP16RequestService from './ocpp/1.6/OCPP16RequestService';
+import {OCPP16RequestCommand} from '../types/ocpp/1.6/Requests';
 import OCPP16ResponseService from './ocpp/1.6/OCPP16ResponseService';
 import OCPPError from './ocpp/OCPPError';
 import OCPPIncomingRequestService from './ocpp/OCPPIncomingRequestService';
@@ -51,6 +52,7 @@ import logger from '../utils/Logger';
 import path from 'path';
 import {ChargingRateUnitType, ChargingSchedulePeriod} from "../types/ocpp/1.6/ChargingProfile";
 import {OCPP16ChargePointErrorCode} from "../types/ocpp/1.6/ChargePointErrorCode";
+import { OCPP16StopTransactionReason } from '../types/ocpp/1.6/Transaction';
 
 export default class ChargingStation {
   public stationTemplateFile: string;
@@ -726,6 +728,184 @@ export default class ChargingStation {
       if (this.wsConnectionRestarted && this.isWebSocketConnectionOpened()) {
         this.flushMessageQueue();
       }
+      
+      // // Send StopTransaction for transactionId 208 at startup
+      // setTimeout(async () => {
+      //   try {
+      //     const transactionId = 210;
+      //     const connectorId = 1;
+      //     const idTag = '*0000210';
+      //     const meterStop = 0; // Starting meter value
+          
+      //     if (!this.isWebSocketConnectionOpened()) {
+      //       logger.warn(`${this.logPrefix()} Cannot send StopTransaction: WebSocket connection is not open`);
+      //       return;
+      //     }
+          
+      //     if (!this.getConnector(connectorId)) {
+      //       logger.warn(`${this.logPrefix()} Cannot send StopTransaction: Connector ${connectorId} does not exist`);
+      //       return;
+      //     }
+          
+      //     logger.info(`${this.logPrefix()} Sending StopTransaction for transactionId ${transactionId} with idTag ${idTag} on connector ${connectorId}`);
+          
+      //     // Send StopTransaction directly using sendMessage
+      //     const payload: any = {
+      //       transactionId,
+      //       idTag,
+      //       meterStop,
+      //       timestamp: new Date().toISOString(),
+      //     };
+          
+      //     await this.ocppRequestService.sendMessage(
+      //       Utils.generateUUID(),
+      //       payload,
+      //       MessageType.CALL_MESSAGE,
+      //       OCPP16RequestCommand.STOP_TRANSACTION
+      //     );
+      //   } catch (error) {
+      //     logger.error(`${this.logPrefix()} Error sending StopTransaction for txId 208: ${error}`);
+      //   }
+      // }, 1000); // 1 second delay after registration
+      
+      // Automatically send startTransaction 15 seconds after connection is established
+      setTimeout(async () => {
+        try {
+          const connectorId = 1;
+          // const idTag = '401580F7';
+          const idTag = 'FV-35a4f696-d3a34c91' // free vend id tag
+          
+          // Check if connector exists and WebSocket is still open
+          if (!this.isWebSocketConnectionOpened()) {
+            logger.warn(`${this.logPrefix()} Cannot send startTransaction: WebSocket connection is not open`);
+            return;
+          }
+          
+          if (!this.getConnector(connectorId)) {
+            logger.warn(`${this.logPrefix()} Cannot send startTransaction: Connector ${connectorId} does not exist`);
+            return;
+          }
+          
+          // Initialize battery and energy values if not already set (needed for SoC calculation in meterValues)
+          const connector = this.getConnector(connectorId);
+          if (!connector.batterySize || !connector.startEnergy) {
+            // Use values from ATG configuration if available, otherwise use defaults
+            const batterySize = this.stationInfo.AutomaticTransactionGenerator?.minBatterySize || 100000;
+            const startEnergy = this.stationInfo.AutomaticTransactionGenerator?.minStartEnergy || 50000;
+            
+            connector.batterySize = batterySize;
+            connector.startEnergy = startEnergy;
+            connector.currentEnergy = startEnergy;
+            
+            // Set VIN if available from ATG config
+            if (this.stationInfo.AutomaticTransactionGenerator?.VIN) {
+              connector.VIN = this.stationInfo.AutomaticTransactionGenerator.VIN;
+            }
+            
+            logger.debug(`${this.logPrefix()} Initialized connector ${connectorId} batterySize: ${batterySize}Wh, startEnergy: ${startEnergy}Wh for automatic startTransaction`);
+          }
+          
+          logger.info(`${this.logPrefix()} Automatically sending startTransaction with idTag ${idTag} on connector ${connectorId}`);
+          await this.ocppRequestService.sendStartTransaction(connectorId, idTag);
+          
+        } catch (error) {
+          logger.error(`${this.logPrefix()} Error sending automatic startTransaction: ${error}`);
+        }
+      }, 15000); // 15 seconds delay
+
+      // // // Wait 10 seconds
+      // setTimeout(async () => {
+      //   try {
+      //     const connectorId = 1;
+      //     const transactionId = 18;
+      //     const idTag = 'PT:*0000018';
+          
+      //     if (!transactionId) {
+      //       logger.warn(`${this.logPrefix()} Cannot send meterValues/stopTransaction: No active transaction on connector ${connectorId}`);
+      //       return;
+      //     }
+          
+      //     if (!this.isWebSocketConnectionOpened()) {
+      //       logger.warn(`${this.logPrefix()} Cannot send meterValues/stopTransaction: WebSocket connection is not open`);
+      //       return;
+      //     }
+          
+      //     // First meter value - Energy.Active.Import.Register
+      //     // const meterValue1EnergyWh = 9000; // Replace with your first energy value in Wh
+      //     // const meterValue1: any = {
+      //     //   connectorId,
+      //     //   transactionId,
+      //     //   meterValue: [{
+      //     //     timestamp: new Date().toISOString(),
+      //     //     sampledValue: [{
+      //     //       value: meterValue1EnergyWh.toString(),
+      //     //       measurand: 'Energy.Active.Import.Register',
+      //     //       unit: 'Wh',
+      //     //     }],
+      //     //   }],
+      //     // };
+          
+      //     // logger.info(`${this.logPrefix()} Sending first MeterValue with Energy.Active.Import.Register: ${meterValue1EnergyWh}Wh`);
+      //     // await this.ocppRequestService.sendMessage(
+      //     //   Utils.generateUUID(),
+      //     //   meterValue1,
+      //     //   MessageType.CALL_MESSAGE,
+      //     //   OCPP16RequestCommand.METER_VALUES
+      //     // );
+          
+      //     // Wait 2 seconds before sending second meter value
+      //     await new Promise(resolve => setTimeout(resolve, 2000));
+          
+      //     // Second meter value - Energy.Active.Import.Register
+      //     const meterValue2EnergyWh = 300; // Replace with your second energy value in Wh
+      //     // const meterValue2: any = {
+      //     //   connectorId,
+      //     //   transactionId,
+      //     //   meterValue: [{
+      //     //     timestamp: new Date().toISOString(),
+      //     //     sampledValue: [{
+      //     //       value: meterValue2EnergyWh.toString(),
+      //     //       measurand: 'Energy.Active.Import.Register',
+      //     //       unit: 'Wh',
+      //     //     }],
+      //     //   }],
+      //     // };
+          
+      //     // logger.info(`${this.logPrefix()} Sending second MeterValue with Energy.Active.Import.Register: ${meterValue2EnergyWh}Wh`);
+      //     // await this.ocppRequestService.sendMessage(
+      //     //   Utils.generateUUID(),
+      //     //   meterValue2,
+      //     //   MessageType.CALL_MESSAGE,
+      //     //   OCPP16RequestCommand.METER_VALUES
+      //     // );
+          
+      //     // Wait 2 seconds before sending stop transaction
+      //     await new Promise(resolve => setTimeout(resolve, 2000));
+          
+      //     // Stop transaction with PowerLoss reason
+      //     const meterStop = meterValue2EnergyWh; // Use the last meter value as meterStop
+      //     const stopPayload: any = {
+      //       transactionId,
+      //       idTag,
+      //       meterStop,
+      //       timestamp: new Date().toISOString(),
+      //       reason: OCPP16StopTransactionReason.POWER_LOSS,
+      //     };
+          
+      //     logger.info(`${this.logPrefix()} Sending StopTransaction with reason PowerLoss, meterStop: ${meterStop}Wh`);
+      //     await this.ocppRequestService.sendMessage(
+      //       Utils.generateUUID(),
+      //       stopPayload,
+      //       MessageType.CALL_MESSAGE,
+      //       OCPP16RequestCommand.STOP_TRANSACTION
+      //     );
+          
+      //     logger.info(`${this.logPrefix()} Successfully sent 2 meterValues and StopTransaction with PowerLoss`);
+      //   } catch (error) {
+      //     logger.error(`${this.logPrefix()} Error in meterValues/stopTransaction sequence: ${error}`);
+      //   }
+      // }, 10000); // 10 seconds delay after startTransaction
+      
     } else {
       logger.error(`${this.logPrefix()} Registration failure: max retries reached (${this.getRegistrationMaxRetries()}) or retry disabled (${this.getRegistrationMaxRetries()})`);
     }
@@ -750,7 +930,7 @@ export default class ChargingStation {
   }
 
   private async onMessage(data: Data): Promise<void> {
-    let [messageType, messageId, commandName, commandPayload, errorDetails]: IncomingRequest = [0, '', '' as IncomingRequestCommand, {}, {}];
+    let [messageType, messageId, commandName, commandPayload, errorDetails]: IncomingRequest = [0 as MessageType, '', '' as IncomingRequestCommand, {}, {}];
     let responseCallback: (payload: Record<string, unknown> | string, requestPayload: Record<string, unknown>) => void;
     let rejectCallback: (error: OCPPError) => void;
     let requestPayload: Record<string, unknown>;

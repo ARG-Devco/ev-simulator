@@ -338,11 +338,25 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
             // Authorization successful, start transaction
             if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
               await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
-              if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
-                logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
-                return null;
-              }
-              return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
+              // Delay 10 seconds before sending startTransaction
+              setTimeout(async () => {
+                try {
+                  if (this.chargingStation.isWebSocketConnectionOpened() && this.chargingStation.getConnector(transactionConnectorId)) {
+                    const startResponse = await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag);
+                    if (startResponse?.idTagInfo?.status === OCPP16AuthorizationStatus.ACCEPTED) {
+                      logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
+                    } else {
+                      logger.warn(this.chargingStation.logPrefix() + ' RemoteStartTransaction: startTransaction was rejected for connector ' + transactionConnectorId);
+                      await this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
+                    }
+                  } else {
+                    logger.warn(this.chargingStation.logPrefix() + ' RemoteStartTransaction: Cannot send startTransaction - connection closed or connector unavailable');
+                  }
+                } catch (error) {
+                  logger.error(this.chargingStation.logPrefix() + ' RemoteStartTransaction: Error sending startTransaction after delay: ' + error);
+                }
+              }, 1000); // 15 seconds delay
+              return null;
             }
             return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
           }
@@ -351,10 +365,26 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         // No authorization check required, start transaction
         if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
           await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
-          if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
-            logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
-            return null;
-          }
+          // Delay 15 seconds before sending startTransaction
+          setTimeout(async () => {
+            console.log("HERE...................")
+            try {
+              if (this.chargingStation.isWebSocketConnectionOpened() && this.chargingStation.getConnector(transactionConnectorId)) {
+                const startResponse = await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag);
+                if (startResponse?.idTagInfo?.status === OCPP16AuthorizationStatus.ACCEPTED) {
+                  logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
+                } else {
+                  logger.warn(this.chargingStation.logPrefix() + ' RemoteStartTransaction: startTransaction was rejected for connector ' + transactionConnectorId);
+                  await this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
+                }
+              } else {
+                logger.warn(this.chargingStation.logPrefix() + ' RemoteStartTransaction: Cannot send startTransaction - connection closed or connector unavailable');
+              }
+            } catch (error) {
+              logger.error(this.chargingStation.logPrefix() + ' RemoteStartTransaction: Error sending startTransaction after delay: ' + error);
+            }
+          }, 25000); // 15 seconds delay
+          return null;
         }
         return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
       }
@@ -388,6 +418,28 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
 
   private async handleRequestRemoteStopTransaction(commandPayload: RemoteStopTransactionRequest): Promise<DefaultResponse> {
     const transactionId = commandPayload.transactionId;
+    
+    // TEMPORARY FIX: Accept transactionId 208 and stop any active transaction
+    // if (transactionId > 0) {
+    //   for (const connector in this.chargingStation.connectors) {
+    //     const connectorId = Utils.convertToInt(connector);
+    //     if (connectorId > 0 && this.chargingStation.getConnector(connectorId)?.transactionStarted) {
+    //       const actualTransactionId = this.chargingStation.getConnector(connectorId).transactionId;
+    //       logger.info(this.chargingStation.logPrefix() + ' TEMPORARY FIX: Accepting RemoteStopTransaction for txId 208, stopping actual transaction ' + actualTransactionId + ' on connector ' + connectorId);
+    //       await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.FINISHING);
+    //       this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.FINISHING;
+    //       await this.chargingStation.ocppRequestService.sendStopTransaction(actualTransactionId, 
+    //         this.chargingStation.getEnergyActiveImportRegisterByTransactionId(actualTransactionId),
+    //         this.chargingStation.getTransactionIdTag(actualTransactionId));
+    //       return Constants.OCPP_RESPONSE_ACCEPTED;
+    //     }
+    //   }
+    //   // If no active transaction found, still accept the request
+    //   logger.warn(this.chargingStation.logPrefix() + ' TEMPORARY FIX: Accepting RemoteStopTransaction for txId 208 but no active transaction found');
+    //   return Constants.OCPP_RESPONSE_ACCEPTED;
+    // }
+    
+    // Normal flow: find transaction by ID
     for (const connector in this.chargingStation.connectors) {
       if (Utils.convertToInt(connector) > 0 && this.chargingStation.getConnector(Utils.convertToInt(connector))?.transactionId === transactionId) {
         await this.chargingStation.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), OCPP16ChargePointStatus.FINISHING);
@@ -535,6 +587,67 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         }
 
         return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+      } else if (commandPayload.vendorId == "SIMULATOR" && commandPayload.messageId == "StartTransaction") {
+
+        console.log(commandPayload.data);
+        const data = JSON.parse(commandPayload.data);
+        const connectorId = data.connectorId;
+        const idTag = data.idTag;
+
+        if (!connectorId || connectorId <= 0) {
+          logger.error(`${this.chargingStation.logPrefix()} StartTransaction: Invalid connectorId ${connectorId}`);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
+
+        if (!idTag) {
+          logger.error(`${this.chargingStation.logPrefix()} StartTransaction: idTag is required`);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
+
+        if (!this.chargingStation.getConnector(connectorId)) {
+          logger.error(`${this.chargingStation.logPrefix()} StartTransaction: Connector ${connectorId} does not exist`);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
+
+        if (this.chargingStation.getConnector(connectorId).transactionStarted) {
+          logger.warn(`${this.chargingStation.logPrefix()} StartTransaction: Transaction already started on connector ${connectorId}`);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
+
+        // Check if charging station and connector are available
+        if (!this.chargingStation.isChargingStationAvailable() || !this.chargingStation.isConnectorAvailable(connectorId)) {
+          logger.warn(`${this.chargingStation.logPrefix()} StartTransaction: Charging station or connector ${connectorId} is not available`);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
+
+        // Check if connector status is AVAILABLE
+        if (this.chargingStation.getConnector(connectorId).status !== OCPP16ChargePointStatus.AVAILABLE) {
+          logger.warn(`${this.chargingStation.logPrefix()} StartTransaction: Connector ${connectorId} is not in AVAILABLE status (current: ${this.chargingStation.getConnector(connectorId).status})`);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
+
+        // Set connector status to PREPARING
+        this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.PREPARING;
+        await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.PREPARING);
+
+        // Send StartTransaction request to back office
+        try {
+          const startResponse = await this.chargingStation.ocppRequestService.sendStartTransaction(connectorId, idTag);
+          if (startResponse?.idTagInfo?.status === OCPP16AuthorizationStatus.ACCEPTED) {
+            logger.info(`${this.chargingStation.logPrefix()} StartTransaction: Transaction started successfully on connector ${connectorId} with idTag ${idTag}`);
+            return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
+          } else {
+            logger.warn(`${this.chargingStation.logPrefix()} StartTransaction: Transaction rejected by back office for idTag ${idTag}`);
+            this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.AVAILABLE;
+            await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.AVAILABLE);
+            return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+          }
+        } catch (error) {
+          logger.error(`${this.chargingStation.logPrefix()} StartTransaction: Error sending startTransaction request: ${error}`);
+          this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.AVAILABLE;
+          await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.AVAILABLE);
+          return Constants.OCPP_DATA_TRANSFER_RESPONSE_REJECTED;
+        }
       } else if (commandPayload.vendorId == "SIMULATOR") {
         return Constants.OCPP_DATA_TRANSFER_RESPONSE_UNKNOWNMESSAGEID;
 

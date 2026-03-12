@@ -1,7 +1,9 @@
-ocpp_path: wss://ocpp.server.com/ocpp
-logname: one
+ocpp_path: wss://cpc.eu-stable.uat.charge.ampeco.tech:443/rove-charging 
+# wss://cpc.rovecharging.com:443/rove-charging
+# ocpp_path: wss://cpc.rovecharging.com:443/rove-charging
+logname: test
 stations:
-  - serial: SERIALNUMBER
+  - serial: local
     power: 180000
     currentType: DC
     requireAuthorize: "false"
@@ -10,8 +12,7 @@ stations:
     maxDuration: 600
     minDelayBetweenTwoTransactions: 305
     maxDelayBetweenTwoTransactions: 305
-    connectors: [ 1,2 ]
+    connectors: [1, 2]
     rfid:
       id:
         - ""
-

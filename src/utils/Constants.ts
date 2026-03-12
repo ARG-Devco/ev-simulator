@@ -58,9 +58,13 @@ export default class Constants {
   static readonly DEFAULT_HEARTBEAT_INTERVAL = 60000; // Ms
 
   static readonly SUPPORTED_MEASURANDS = Object.freeze([MeterValueMeasurand.STATE_OF_CHARGE, MeterValueMeasurand.VOLTAGE,
-    MeterValueMeasurand.POWER_ACTIVE_IMPORT, MeterValueMeasurand.CURRENT_IMPORT, MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER]);
+  MeterValueMeasurand.POWER_ACTIVE_IMPORT, MeterValueMeasurand.CURRENT_IMPORT, MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER]);
 
   static readonly DEFAULT_FLUCTUATION_PERCENT = 5;
+
+  // Energy.Active.Import.Register: granular increment per MeterValues sample (Wh) – e.g. ~97 for values like 143.1, 240.1
+  static readonly METER_VALUE_ENERGY_INCREMENT_WH = 97;
+  static readonly METER_VALUE_ENERGY_DECIMAL_PLACES = 1;
 
   static readonly PERFORMANCE_RECORDS_FILETYPE = 'Performance records';
   static readonly DEFAULT_PERFORMANCE_RECORDS_FILENAME = 'performanceRecords.json';
