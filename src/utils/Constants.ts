@@ -58,9 +58,16 @@ export default class Constants {
   static readonly DEFAULT_HEARTBEAT_INTERVAL = 60000; // Ms
 
   static readonly SUPPORTED_MEASURANDS = Object.freeze([MeterValueMeasurand.STATE_OF_CHARGE, MeterValueMeasurand.VOLTAGE,
-    MeterValueMeasurand.POWER_ACTIVE_IMPORT, MeterValueMeasurand.CURRENT_IMPORT, MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER]);
+  MeterValueMeasurand.POWER_ACTIVE_IMPORT, MeterValueMeasurand.CURRENT_IMPORT, MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER]);
 
   static readonly DEFAULT_FLUCTUATION_PERCENT = 5;
+
+  // Decimal places used when reporting Energy.Active.Import.Register in MeterValues
+  static readonly METER_VALUE_ENERGY_DECIMAL_PLACES = 4;
+
+  // Delay applied before sending StartTransaction in response to a RemoteStartTransaction.
+  // Defaults to no delay; raise it locally to reproduce back office race conditions.
+  static readonly REMOTE_START_TRANSACTION_DELAY_MS = 0;
 
   static readonly PERFORMANCE_RECORDS_FILETYPE = 'Performance records';
   static readonly DEFAULT_PERFORMANCE_RECORDS_FILENAME = 'performanceRecords.json';

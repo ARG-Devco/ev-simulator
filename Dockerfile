@@ -4,6 +4,10 @@ WORKDIR /usr/builder
 
 COPY package.json package-lock.json ./
 
+# sqlite3 has no prebuilt binary for musl/arm64, so it compiles from source.
+# Its generated Makefile invokes `python`, which alpine's python3 package does not provide.
+RUN apk add --no-cache python3 make g++ && ln -sf /usr/bin/python3 /usr/bin/python
+
 RUN npm set progress=false && npm config set depth 0 && npm cache clean --force
 RUN npm install
 COPY tsconfig.json rollup.config.js ./

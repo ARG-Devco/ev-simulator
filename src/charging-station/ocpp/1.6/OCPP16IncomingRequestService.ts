@@ -338,11 +338,8 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
             // Authorization successful, start transaction
             if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
               await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
-              if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
-                logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
-                return null;
-              }
-              return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
+              await this.startRemotelyRequestedTransaction(transactionConnectorId, commandPayload.idTag);
+              return null;
             }
             return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
           }
@@ -351,16 +348,38 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
         // No authorization check required, start transaction
         if (this.setRemoteStartTransactionChargingProfile(transactionConnectorId, commandPayload.chargingProfile)) {
           await this.chargingStation.ocppRequestService.sendMessage(messageId, Constants.OCPP_RESPONSE_ACCEPTED, MessageType.CALL_RESULT_MESSAGE, commandName);
-          if ((await this.chargingStation.ocppRequestService.sendStartTransaction(transactionConnectorId, commandPayload.idTag)).idTagInfo.status === OCPP16AuthorizationStatus.ACCEPTED) {
-            logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + transactionConnectorId.toString() + ' for idTag ' + commandPayload.idTag);
-            return null;
-          }
+          await this.startRemotelyRequestedTransaction(transactionConnectorId, commandPayload.idTag);
+          return null;
         }
         return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
       }
       return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
     }
     return this.notifyRemoteStartTransactionRejected(transactionConnectorId, commandPayload.idTag);
+  }
+
+  // Sends the StartTransaction that follows an accepted RemoteStartTransaction. The
+  // RemoteStartTransaction response has already been sent at this point, so a rejected
+  // StartTransaction is reported by putting the connector back to AVAILABLE.
+  private async startRemotelyRequestedTransaction(connectorId: number, idTag: string): Promise<void> {
+    if (Constants.REMOTE_START_TRANSACTION_DELAY_MS > 0) {
+      await Utils.sleep(Constants.REMOTE_START_TRANSACTION_DELAY_MS);
+    }
+    try {
+      if (!this.chargingStation.isWebSocketConnectionOpened() || !this.chargingStation.getConnector(connectorId)) {
+        logger.warn(`${this.chargingStation.logPrefix()} RemoteStartTransaction: cannot send StartTransaction on connector ${connectorId}, connection closed or connector unavailable`);
+        return;
+      }
+      const startResponse = await this.chargingStation.ocppRequestService.sendStartTransaction(connectorId, idTag);
+      if (startResponse?.idTagInfo?.status === OCPP16AuthorizationStatus.ACCEPTED) {
+        logger.debug(this.chargingStation.logPrefix() + ' Transaction remotely STARTED on ' + this.chargingStation.stationInfo.chargingStationId + '#' + connectorId.toString() + ' for idTag ' + idTag);
+        return;
+      }
+      logger.warn(`${this.chargingStation.logPrefix()} RemoteStartTransaction: StartTransaction rejected on connector ${connectorId} for idTag ${idTag}, status ${startResponse?.idTagInfo?.status}`);
+      await this.notifyRemoteStartTransactionRejected(connectorId, idTag);
+    } catch (error) {
+      logger.error(`${this.chargingStation.logPrefix()} RemoteStartTransaction: error sending StartTransaction on connector ${connectorId}: ${error}`);
+    }
   }
 
   private async notifyRemoteStartTransactionRejected(connectorId: number, idTag: string): Promise<DefaultResponse> {
@@ -388,6 +407,7 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
 
   private async handleRequestRemoteStopTransaction(commandPayload: RemoteStopTransactionRequest): Promise<DefaultResponse> {
     const transactionId = commandPayload.transactionId;
+    
     for (const connector in this.chargingStation.connectors) {
       if (Utils.convertToInt(connector) > 0 && this.chargingStation.getConnector(Utils.convertToInt(connector))?.transactionId === transactionId) {
         await this.chargingStation.ocppRequestService.sendStatusNotification(Utils.convertToInt(connector), OCPP16ChargePointStatus.FINISHING);
@@ -505,11 +525,41 @@ export default class OCPP16IncomingRequestService extends OCPPIncomingRequestSer
 
         console.log(commandPayload.data);
         const data = JSON.parse(commandPayload.data);
-        const connectorId = data.connectorId;
+        const connectorId: number = data.connectorId;
+        // Optional: when present, an Authorize is sent with this idTag right after plugging in
+        const idTagToAuthorize: string = data.idTagToAuthorize;
 
         if (connectorId > 0 && (this.chargingStation.getConnector(connectorId).availability === OCPP16AvailabilityType.OPERATIVE && this.chargingStation.getConnector(connectorId).status === OCPP16ChargePointStatus.AVAILABLE)) {
           this.chargingStation.getConnector(connectorId).status = OCPP16ChargePointStatus.PREPARING;
           await this.chargingStation.ocppRequestService.sendStatusNotification(connectorId, OCPP16ChargePointStatus.PREPARING);
+
+          if (idTagToAuthorize) {
+            const authorizeResponse = await this.chargingStation.ocppRequestService.sendAuthorize(connectorId, idTagToAuthorize);
+            if (authorizeResponse?.idTagInfo?.status === OCPP16AuthorizationStatus.ACCEPTED) {
+              logger.info(`${this.chargingStation.logPrefix()} PluggedIn: idTag ${idTagToAuthorize} authorized on connector ${connectorId}`);
+
+              // Seed battery/energy values when the ATG is not running, otherwise the SoC
+              // sampled value in MeterValues is computed from undefined and reports NaN
+              const connector = this.chargingStation.getConnector(connectorId);
+              if (!connector.batterySize || !connector.startEnergy) {
+                connector.batterySize = this.chargingStation.stationInfo.AutomaticTransactionGenerator?.minBatterySize ?? 100000;
+                connector.startEnergy = this.chargingStation.stationInfo.AutomaticTransactionGenerator?.minStartEnergy ?? 50000;
+                connector.currentEnergy = connector.startEnergy;
+                logger.debug(`${this.chargingStation.logPrefix()} PluggedIn: initialized connector ${connectorId} batterySize ${connector.batterySize}Wh, startEnergy ${connector.startEnergy}Wh`);
+              }
+
+              // Authorization accepted: start the transaction with the same idTag
+              const startResponse = await this.chargingStation.ocppRequestService.sendStartTransaction(connectorId, idTagToAuthorize);
+              if (startResponse?.idTagInfo?.status === OCPP16AuthorizationStatus.ACCEPTED) {
+                logger.info(`${this.chargingStation.logPrefix()} PluggedIn: transaction ${startResponse.transactionId} started on connector ${connectorId} for idTag ${idTagToAuthorize}`);
+              } else {
+                logger.warn(`${this.chargingStation.logPrefix()} PluggedIn: startTransaction rejected on connector ${connectorId} for idTag ${idTagToAuthorize}, status ${startResponse?.idTagInfo?.status}`);
+              }
+            } else {
+              logger.warn(`${this.chargingStation.logPrefix()} PluggedIn: idTag ${idTagToAuthorize} not authorized on connector ${connectorId}, status ${authorizeResponse?.idTagInfo?.status}`);
+            }
+          }
+
           return Constants.OCPP_DATA_TRANSFER_RESPONSE_ACCEPTED;
         }
 

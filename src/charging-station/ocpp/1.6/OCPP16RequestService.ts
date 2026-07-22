@@ -2,7 +2,7 @@ import { ACElectricUtils, DCElectricUtils } from '../../../utils/ElectricUtils';
 import { AuthorizeRequest, OCPP16AuthorizeResponse, OCPP16StartTransactionResponse, OCPP16StopTransactionReason, OCPP16StopTransactionResponse, StartTransactionRequest, StopTransactionRequest } from '../../../types/ocpp/1.6/Transaction';
 import { CurrentType, Voltage } from '../../../types/ChargingStationTemplate';
 import { DiagnosticsStatusNotificationRequest, HeartbeatRequest, OCPP16BootNotificationRequest, OCPP16IncomingRequestCommand, OCPP16RequestCommand, StatusNotificationRequest } from '../../../types/ocpp/1.6/Requests';
-import { MeterValueUnit, MeterValuesRequest, OCPP16MeterValue, OCPP16MeterValueMeasurand, OCPP16MeterValuePhase } from '../../../types/ocpp/1.6/MeterValues';
+import { MeterValueFormat, MeterValueUnit, MeterValuesRequest, OCPP16MeterValue, OCPP16MeterValueMeasurand, OCPP16MeterValuePhase } from '../../../types/ocpp/1.6/MeterValues';
 
 import Constants from '../../../utils/Constants';
 import { ErrorType } from '../../../types/ocpp/ErrorType';
@@ -304,36 +304,34 @@ export default class OCPP16RequestService extends OCPPRequestService {
           }
         }
       }
-      // Energy.Active.Import.Register measurand (default)
+      // Energy.Active.Import.Register measurand (default), reported with format Raw
       const energySampledValueTemplate = this.chargingStation.getSampledValueTemplate(connectorId);
       if (energySampledValueTemplate) {
         OCPP16ServiceUtils.checkMeasurandPowerDivider(this.chargingStation, energySampledValueTemplate.measurand);
         const unitDivider = energySampledValueTemplate?.unit === MeterValueUnit.KILO_WATT_HOUR ? 1000 : 1;
+        const decimalPlaces = Constants.METER_VALUE_ENERGY_DECIMAL_PLACES;
         const ratedPower = Math.round(this.chargingStation.stationInfo.maxPower / this.chargingStation.stationInfo.powerDivider);
         const maxPower = this.chargingStation.getChargingProfileAllowablePower(connectorId, ratedPower);
-        const energyMeasurandValue = energySampledValueTemplate.value
-          // Cumulate the fluctuated value around the static one
-          ? (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval) / unitDivider
-          : (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval) / unitDivider;
+        const energyMeasurandValue = (maxPower / (this.chargingStation.stationInfo.powerDivider * 3600000) * interval) / unitDivider;
 
         // Persist previous value on connector
         if (connector && !Utils.isNullOrUndefined(connector.energyActiveImportRegisterValue) && connector.energyActiveImportRegisterValue >= 0 &&
-            !Utils.isNullOrUndefined(connector.transactionEnergyActiveImportRegisterValue) && connector.transactionEnergyActiveImportRegisterValue >= 0) {
+          !Utils.isNullOrUndefined(connector.transactionEnergyActiveImportRegisterValue) && connector.transactionEnergyActiveImportRegisterValue >= 0) {
           connector.energyActiveImportRegisterValue += energyMeasurandValue;
           connector.transactionEnergyActiveImportRegisterValue += energyMeasurandValue;
-          connector.currentEnergy = connector.transactionEnergyActiveImportRegisterValue + connector.startEnergy ;
+          connector.currentEnergy = connector.transactionEnergyActiveImportRegisterValue + (connector.startEnergy ?? 0);
         } else {
           connector.energyActiveImportRegisterValue = 0;
           connector.transactionEnergyActiveImportRegisterValue = 0;
-          connector.currentEnergy = connector.startEnergy;
+          connector.currentEnergy = connector.startEnergy ?? 0;
         }
 
         if (socSampledValueTemplate) {
 
-          const power = maxPower ;
-          const currentEnergy = this.chargingStation.getConnector(connectorId).currentEnergy ;
-          const vin = this.chargingStation.getConnector(connectorId).VIN ;
-          const soc = Math.floor(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100) ;
+          const power = maxPower;
+          const currentEnergy = this.chargingStation.getConnector(connectorId).currentEnergy;
+          const vin = this.chargingStation.getConnector(connectorId).VIN;
+          const soc = Math.floor(this.chargingStation.getConnector(connectorId).currentEnergy / this.chargingStation.getConnector(connectorId).batterySize * 100);
           logger.debug(`${this.chargingStation.logPrefix()} ${new Date().toISOString()} Power set to: ${power} W, with ${currentEnergy} Wh and SOC: ${soc} % using ${vin}`);
 
           meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(socSampledValueTemplate, soc));
@@ -343,11 +341,15 @@ export default class OCPP16RequestService extends OCPPRequestService {
           }
         }
 
-        meterValue.sampledValue.push(OCPP16ServiceUtils.buildSampledValue(energySampledValueTemplate,
-          Utils.roundTo(this.chargingStation.getEnergyActiveImportRegisterByTransactionId(transactionId) / unitDivider, 4)));
+        const energyRegisterValue = Utils.roundTo(this.chargingStation.getEnergyActiveImportRegisterByTransactionId(transactionId) / unitDivider, decimalPlaces);
+        const energySampledValue = {
+          ...OCPP16ServiceUtils.buildSampledValue(energySampledValueTemplate, energyRegisterValue),
+          format: MeterValueFormat.RAW
+        };
+        meterValue.sampledValue.push(energySampledValue);
         const sampledValuesIndex = meterValue.sampledValue.length - 1;
         const maxEnergy = Math.round(this.chargingStation.stationInfo.maxPower * 3600 / (this.chargingStation.stationInfo.powerDivider * interval));
-        const maxEnergyRounded = Utils.roundTo(maxEnergy / unitDivider, 4);
+        const maxEnergyRounded = Utils.roundTo(maxEnergy / unitDivider, decimalPlaces);
         if (Utils.convertToFloat(meterValue.sampledValue[sampledValuesIndex].value) > maxEnergyRounded || debug) {
           logger.error(`${this.chargingStation.logPrefix()} MeterValues measurand ${meterValue.sampledValue[sampledValuesIndex].measurand ?? OCPP16MeterValueMeasurand.ENERGY_ACTIVE_IMPORT_REGISTER}: connectorId ${connectorId}, transaction ${connector.transactionId}, value: ${meterValue.sampledValue[sampledValuesIndex].value}/${maxEnergyRounded}`);
         }

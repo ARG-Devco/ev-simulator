@@ -94,3 +94,7 @@ mta_archives/
 *.tar.gz
 performanceRecords.json
 *.db
+
+# Local-only simulator config and run helper (never commit)
+values.local.yaml
+run-sim-local.sh
