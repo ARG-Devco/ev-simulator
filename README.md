@@ -1,10 +1,16 @@
-# [ev-simulator](https://github.com/sap-labs-france/ev-simulator)
+# ev-simulator
+
+Rove fork of [sap-labs-france/ev-simulator](https://github.com/sap-labs-france/ev-simulator).
 
 ## Summary
 
 Simple [node.js](https://nodejs.org/) program to simulate a set of charging stations based on the OCPP-J 1.6 protocol.
 
+This fork adds a `values.yaml` driven deployment flow and vendor-specific `DataTransfer` commands that let a back office drive a simulated station directly (plug in, start a session, unplug). See [Rove-specific usage](#rove-specific-usage).
+
 ## Prerequisites
+
+Node.js **16.x.x** and npm **8.x.x** (see `engines` in [package.json](package.json)). The Docker images build on `node:16.3.0-alpine`.
 
 ### Windows
 
@@ -19,12 +25,12 @@ choco install -y nodejs-lts
 * [Homebrew](https://brew.sh/):
 
 ```shell
-brew install node@14
+brew install node@16
 ```
 
 ### GNU/Linux: 
 
-* [NodeSource](https://github.com/nodesource/distributions) Node.js Binary Distributions for version 14.X
+* [NodeSource](https://github.com/nodesource/distributions) Node.js Binary Distributions for version 16.X
 
 ## Configuration syntax
 
@@ -150,6 +156,8 @@ Connectors | | | Connectors | charging stations connectors configuration section
 
 #### AutomaticTransactionGenerator section
 
+The Automatic Transaction Generator (ATG) is a built-in robot driver: when `enable` is `true` the station starts and stops charging sessions on its own, with no command from the back office. When `enable` is `false` the station boots, sends `StatusNotification` with status `Available`, and then stays idle until the back office drives it.
+
 ```json
   "AutomaticTransactionGenerator": {
     "enable": false,
@@ -159,10 +167,20 @@ Connectors | | | Connectors | charging stations connectors configuration section
     "maxDelayBetweenTwoTransactions": 30,
     "probabilityOfStart": 1,
     "stopAfterHours": 0.3,
+    "stopAfterNumberOfTransaction": 1,
     "stopOnConnectionFailure": true,
-    "requireAuthorize": true
+    "requireAuthorize": true,
+    "minBatterySize": 100000,
+    "maxBatterySize": 100000,
+    "minStartEnergy": 50000,
+    "maxStartEnergy": 50000,
+    "minDesiredEnergy": 80000,
+    "maxDesiredEnergy": 80000,
+    "VIN": "ABC"
   }
 ```
+
+The battery/energy keys are used to compute the `SoC` sampled value in MeterValues: `SoC = currentEnergy / batterySize * 100`, where `currentEnergy` starts at `startEnergy` and grows with each MeterValues sample. Sizes are in Wh.
 #### Connectors section
 
 ```json
@@ -200,16 +218,101 @@ To start the program, run: `npm start`.
 
 ## Docker
 
-In the [docker](./docker) folder:
+The image built and deployed for Rove uses the **root [Dockerfile](Dockerfile)**. It runs [run.sh](run.sh), which renders `values.yaml` into the simulator's config via [render.py](render.py) before starting node — see [Rove-specific usage](#rove-specific-usage).
+
+Build (the target platform must match the cluster; `linux/amd64`):
 
 ```bash
-make
+./docker-build.sh <tag>          # docker buildx build --platform=linux/amd64 -t ev-simulator:<tag> .
 ```
 
-Or with the optional git submodules:
+Run locally, mounting a values file:
 
 ```bash
-make SUBMODULES_INIT=true
+docker run --rm -p 8090:8090 -v "$(pwd)/sample.yaml:/usr/app/values.yaml" ev-simulator:<tag>
+```
+
+> The [docker](./docker) folder holds an older, separate build (`make`, `docker/Dockerfile`, `docker/config.json`) that does **not** support the `values.yaml` flow. It is not the image deployed for Rove.
+
+## Rove-specific usage
+
+### values.yaml
+
+Rather than editing `config.json` and station templates by hand, this fork renders them from a single `values.yaml` at container start. [render.py](render.py) reads it and generates, per station, a station template and an authorization tags file from the Jinja templates in [src/assets](src/assets). A working example is [sample.yaml](sample.yaml):
+
+```yaml
+ocpp_path: wss://ocpp.server.com/ocpp
+logname: one
+stations:
+  - serial: SERIALNUMBER
+    power: 180000
+    currentType: DC
+    requireAuthorize: "false"
+    automatictransaction: "false"
+    minDuration: 600
+    maxDuration: 600
+    minDelayBetweenTwoTransactions: 305
+    maxDelayBetweenTwoTransactions: 305
+    connectors: [1, 2]
+    rfid:
+      id:
+        - ""
+```
+
+Key | Description
+--- | -----------
+ocpp_path | OCPP-J server URL the stations connect to
+logname | log file name suffix
+serial | station serial number; also the generated template file name
+power | station maximum power in W
+currentType | `AC` or `DC`
+connectors | list of connector ids
+requireAuthorize | ATG sends `Authorize` before `StartTransaction`
+automatictransaction | enable the ATG (`"true"`/`"false"`, as strings)
+minDuration / maxDuration | ATG session duration bounds in seconds
+minDelayBetweenTwoTransactions / maxDelayBetweenTwoTransactions | ATG delay bounds in seconds
+rfid.id | list of RFID tags for the generated authorization tags file
+
+Values not listed here fall back to the defaults in [src/assets/station-templates/station.j2](src/assets/station-templates/station.j2).
+
+### Vendor DataTransfer commands
+
+The back office can drive a simulated station by sending `DataTransfer` with `vendorId: "SIMULATOR"`. In every case `data` is a **JSON-encoded string**, not a nested object.
+
+#### PluggedIn
+
+Simulates plugging a cable in. Moves the connector to `Preparing` and sends the matching `StatusNotification`.
+
+If the optional `idTagToAuthorize` is present, the station additionally sends `Authorize` with that tag and — when authorization is accepted — starts a transaction with the same tag. This lets a single message drive a complete session without a separate `RemoteStartTransaction`. Omit the field for the plug-in-only behaviour.
+
+```json
+{
+  "vendorId": "SIMULATOR",
+  "messageId": "PluggedIn",
+  "data": "{\"connectorId\":1,\"idTagToAuthorize\":\"401580F7\"}"
+}
+```
+
+Resulting message sequence when `idTagToAuthorize` is accepted:
+
+```
+StatusNotification(Preparing) -> Authorize -> StartTransaction -> StatusNotification(Charging) -> MeterValues...
+```
+
+The connector must be `OPERATIVE` and `Available`, otherwise the command is rejected. If the `Authorize` or the `StartTransaction` is rejected, the reason is logged and no transaction starts; the `DataTransfer` itself is still accepted.
+
+When the ATG is disabled, battery size and start energy are seeded from the `AutomaticTransactionGenerator` section of the station template so that the `SoC` sampled value in MeterValues is a real number.
+
+#### Unplugged
+
+Simulates unplugging the cable. From `Preparing` it returns the connector to `Available`; from `Charging` it sends `StatusNotification(Finishing)` and stops the running transaction.
+
+```json
+{
+  "vendorId": "SIMULATOR",
+  "messageId": "Unplugged",
+  "data": "{\"connectorId\":1}"
+}
 ```
 
 ## OCPP-J commands supported
@@ -223,7 +326,7 @@ make SUBMODULES_INIT=true
 - :white_check_mark: ChangeAvailability
 - :white_check_mark: ChangeConfiguration
 - :white_check_mark: ClearCache
-- :x: DataTransfer
+- :white_check_mark: DataTransfer (vendor `SIMULATOR` messages only, see [Vendor DataTransfer commands](#vendor-datatransfer-commands))
 - :white_check_mark: GetConfiguration
 - :white_check_mark: Heartbeat
 - :white_check_mark: MeterValues
@@ -238,7 +341,7 @@ make SUBMODULES_INIT=true
 #### Firmware Management Profile
 
 - :white_check_mark: GetDiagnostics
-- :x: DiagnosticsStatusNotification
+- :white_check_mark: DiagnosticsStatusNotification
 - :x: FirmwareStatusNotification
 - :x: UpdateFirmware
 
