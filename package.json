@@ -75,7 +75,7 @@
     "uuid": "^8.3.2",
     "winston": "^3.5.1",
     "winston-daily-rotate-file": "^4.6.0",
-    "ws": "^8.4.2"
+    "ws": "^8.17.1"
   },
   "optionalDependencies": {
     "utf-8-validate": "^5.0.8",
