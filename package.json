@@ -60,10 +60,10 @@
     "release": "release-it"
   },
   "dependencies": {
-    "@mikro-orm/core": "^4.5.9",
-    "@mikro-orm/mariadb": "^4.5.10",
-    "@mikro-orm/reflection": "^4.5.10",
-    "@mikro-orm/sqlite": "^4.5.10",
+    "@mikro-orm/core": "^6.4.1",
+    "@mikro-orm/mariadb": "^6.4.1",
+    "@mikro-orm/reflection": "^6.4.1",
+    "@mikro-orm/sqlite": "^6.4.1",
     "basic-ftp": "^4.6.6",
     "chalk": "^4.1.2",
     "mongodb": "^4.6.0",
@@ -83,7 +83,7 @@
   },
   "devDependencies": {
     "@istanbuljs/nyc-config-typescript": "^1.0.2",
-    "@mikro-orm/cli": "^4.5.10",
+    "@mikro-orm/cli": "^6.4.1",
     "@rollup/plugin-json": "^4.1.0",
     "@types/mocha": "^9.1.0",
     "@types/mochawesome": "^6.2.1",
